@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --color-primary: #166534;
+  --color-dark: #0f172a;
+  --color-accent: #f59e0b;
+  --color-muted-bg: #f8fafc;
+  --color-border: #e2e8f0;
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
+}
+
+:root {
+  font-family: 'Inter', sans-serif;
+  color: #0f172a;
+  background:
+    radial-gradient(circle at top left, rgba(22, 101, 52, 0.16), transparent 26%),
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.14), transparent 20%),
+    linear-gradient(180deg, #fdfefc 0%, #f8fafc 42%, #eef6f0 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(22, 101, 52, 0.15);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.14);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@utility glass-panel {
+  background: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(16px);
+}
+
+@utility dashboard-shadow {
+  box-shadow:
+    0 20px 45px rgba(15, 23, 42, 0.08),
+    0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+@utility field-grid {
+  background-image:
+    linear-gradient(rgba(22, 101, 52, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(22, 101, 52, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}

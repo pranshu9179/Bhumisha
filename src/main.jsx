@@ -1,0 +1,16 @@
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import App from './App.jsx'
+import { bootstrapApp } from '@/app/bootstrap'
+import { AppProviders } from '@/app/providers'
+import './index.css'
+
+bootstrapApp()
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <AppProviders>
+      <App />
+    </AppProviders>
+  </StrictMode>,
+)

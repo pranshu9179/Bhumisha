@@ -1,0 +1,17 @@
+export const queryKeys = {
+  analytics: (role) => ['analytics', role],
+  users: (params) => ['users', params],
+  queries: (params) => ['queries', params],
+  queryDetail: (id) => ['queries', 'detail', id],
+  recommendations: ['recommendations'],
+  products: (params) => ['products', params],
+  productDetail: (id) => ['products', 'detail', id],
+  categories: ['categories'],
+  orders: (params) => ['orders', params],
+  escalations: (params) => ['escalations', params],
+  notifications: (params) => ['notifications', params],
+  auditLogs: ['audit-logs'],
+  tasks: (params) => ['tasks', params],
+  supportCases: ['support-cases'],
+  settings: ['settings'],
+}
