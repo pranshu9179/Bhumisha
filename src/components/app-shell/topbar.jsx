@@ -38,9 +38,9 @@ export function Topbar({ role }) {
             </Button>
             <BreadcrumbTrail role={role} />
           </div>
-          <p className="text-sm text-slate-500">
+          {/* <p className="text-sm text-slate-500">
             Responsive enterprise workspace designed for operations, advisory, and commerce teams.
-          </p>
+          </p> */}
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

@@ -250,6 +250,30 @@ export const seedDatabase = {
       recommendedFor: ['vegetables', 'nursery'],
     },
   ],
+  cropDiseases: [
+    {
+      id: 'disease_1',
+      crop_id: 'prod_1',
+      crop_name: 'Monsoon Hybrid Maize',
+      title: 'Leaf Blight',
+      title_hi: 'लीफ ब्लाइट',
+      description: 'Long brown lesions on maize leaves with yellow edges.',
+      description_hi: 'मक्का की पत्तियों पर पीले किनारों वाले लंबे भूरे धब्बे।',
+      medial_url: ['https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=600&q=80'],
+      is_delete: 0,
+    },
+    {
+      id: 'disease_2',
+      crop_id: 'prod_3',
+      crop_name: 'Neem Guard Spray',
+      title: 'Powdery Mildew',
+      title_hi: 'पाउडरी मिल्ड्यू',
+      description: 'White powder-like fungal growth on leaf surfaces.',
+      description_hi: 'पत्तियों की सतह पर सफेद पाउडर जैसा फफूंद विकास।',
+      medial_url: ['https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=600&q=80'],
+      is_delete: 0,
+    },
+  ],
   queries: [
     {
       id: 'qry_1',

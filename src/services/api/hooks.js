@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { demoApi, analyticsApi, auditApi, authApi, categoriesApi, escalationsApi, notificationsApi, ordersApi, productsApi, queriesApi, recommendationsApi, settingsApi, supportCasesApi, tasksApi, usersApi } from '@/services/api/resources'
+import { demoApi, analyticsApi, auditApi, authApi, categoriesApi, cropDetailsApi, cropDiseaseApi, escalationsApi, guideDetailsApi, guideHeadingsApi, notificationsApi, ordersApi, productsApi, queriesApi, recommendationsApi, settingsApi, supportCasesApi, tasksApi, usersApi } from '@/services/api/resources'
 import { queryKeys } from '@/services/api/query-keys'
 
 export function useAnalytics(role) {
@@ -53,10 +53,70 @@ export function useProductDetail(id) {
   })
 }
 
-export function useCategories() {
+export function useCategories(params = {}) {
   return useQuery({
-    queryKey: queryKeys.categories,
-    queryFn: categoriesApi.list,
+    queryKey: queryKeys.categories(params),
+    queryFn: () => categoriesApi.list(params),
+  })
+}
+
+export function useCategoryDetail(id) {
+  return useQuery({
+    queryKey: queryKeys.categoryDetail(id),
+    queryFn: () => categoriesApi.detail(id),
+    enabled: Boolean(id),
+  })
+}
+
+export function useCropDetails(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.cropDetails(params),
+    queryFn: () => cropDetailsApi.list(params),
+  })
+}
+
+export function useCropDiseases(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.cropDiseases(params),
+    queryFn: () => cropDiseaseApi.list(params),
+  })
+}
+
+export function useCropDiseaseDetail(id) {
+  return useQuery({
+    queryKey: queryKeys.cropDiseaseDetail(id),
+    queryFn: () => cropDiseaseApi.detail(id),
+    enabled: Boolean(id),
+  })
+}
+
+export function useGuideHeadings() {
+  return useQuery({
+    queryKey: queryKeys.guideHeadings,
+    queryFn: guideHeadingsApi.list,
+  })
+}
+
+export function useGuideHeadingDetail(id) {
+  return useQuery({
+    queryKey: queryKeys.guideHeadingDetail(id),
+    queryFn: () => guideHeadingsApi.detail(id),
+    enabled: Boolean(id),
+  })
+}
+
+export function useGuideDetails() {
+  return useQuery({
+    queryKey: queryKeys.guideDetails,
+    queryFn: guideDetailsApi.list,
+  })
+}
+
+export function useGuideDetailsByCrop(cropId) {
+  return useQuery({
+    queryKey: queryKeys.guideDetailsByCrop(cropId),
+    queryFn: () => guideDetailsApi.byCrop(cropId),
+    enabled: Boolean(cropId),
   })
 }
 
@@ -125,10 +185,41 @@ export function useLoginMutation() {
   })
 }
 
+export function useLogoutMutation() {
+  return useMutation({
+    mutationFn: authApi.logout,
+  })
+}
+
 export function useForgotPasswordMutation() {
   return useMutation({
     mutationFn: authApi.forgotPassword,
   })
+}
+
+export function useRegisterMutation() {
+  return useMutation({
+    mutationFn: authApi.register,
+  })
+}
+
+export function useVerifyOtpMutation() {
+  return useMutation({
+    mutationFn: authApi.verifyOtp,
+  })
+}
+
+export function useResendOtpMutation() {
+  return useMutation({
+    mutationFn: authApi.resendOtp,
+  })
+}
+
+export function useProfileImageMutation() {
+  return useInvalidatingMutation(
+    authApi.updateProfileImage,
+    [['users']],
+  )
 }
 
 export function useResetPasswordMutation() {
@@ -147,6 +238,20 @@ export function useUserSaveMutation() {
 export function useUserDeleteMutation() {
   return useInvalidatingMutation(
     (id) => usersApi.remove(id),
+    [['users'], ['audit-logs'], ['analytics']],
+  )
+}
+
+export function useUserRoleMutation() {
+  return useInvalidatingMutation(
+    ({ id, role }) => usersApi.updateRole(id, role),
+    [['users'], ['audit-logs'], ['analytics']],
+  )
+}
+
+export function useUserStatusToggleMutation() {
+  return useInvalidatingMutation(
+    (id) => usersApi.toggleStatus(id),
     [['users'], ['audit-logs'], ['analytics']],
   )
 }
@@ -174,7 +279,7 @@ export function useProductDeleteMutation() {
 
 export function useCategorySaveMutation() {
   return useInvalidatingMutation(
-    (payload) => categoriesApi.create(payload),
+    ({ id, payload }) => (id ? categoriesApi.update(id, payload) : categoriesApi.create(payload)),
     [['categories'], ['audit-logs']],
   )
 }
@@ -183,6 +288,90 @@ export function useCategoryDeleteMutation() {
   return useInvalidatingMutation(
     (id) => categoriesApi.remove(id),
     [['categories'], ['audit-logs']],
+  )
+}
+
+export function useCropDetailSaveMutation() {
+  return useInvalidatingMutation(
+    ({ id, payload }) => (id ? cropDetailsApi.update(id, payload) : cropDetailsApi.create(payload)),
+    [['crop-details'], ['products'], ['analytics']],
+  )
+}
+
+export function useCropDetailStatusMutation() {
+  return useInvalidatingMutation(
+    (id) => cropDetailsApi.toggleStatus(id),
+    [['crop-details'], ['analytics']],
+  )
+}
+
+export function useCropDetailImagesMutation() {
+  return useInvalidatingMutation(
+    ({ id, payload }) => cropDetailsApi.updateImages(id, payload),
+    [['crop-details']],
+  )
+}
+
+export function useCropDiseaseSaveMutation() {
+  return useInvalidatingMutation(
+    ({ id, payload }) => (id ? cropDiseaseApi.update(id, payload) : cropDiseaseApi.create(payload)),
+    [['crop-diseases'], ['audit-logs'], ['analytics']],
+  )
+}
+
+export function useCropDiseaseDeleteMutation() {
+  return useInvalidatingMutation(
+    (id) => cropDiseaseApi.remove(id),
+    [['crop-diseases'], ['audit-logs'], ['analytics']],
+  )
+}
+
+export function useGuideHeadingSaveMutation() {
+  return useInvalidatingMutation(
+    ({ id, payload }) => (id ? guideHeadingsApi.update(id, payload) : guideHeadingsApi.create(payload)),
+    [['guide-headings']],
+  )
+}
+
+export function useGuideHeadingDeleteMutation() {
+  return useInvalidatingMutation(
+    (id) => guideHeadingsApi.remove(id),
+    [['guide-headings'], ['guide-details']],
+  )
+}
+
+export function useGuideHeadingRestoreMutation() {
+  return useInvalidatingMutation(
+    (id) => guideHeadingsApi.restore(id),
+    [['guide-headings'], ['guide-details']],
+  )
+}
+
+export function useGuideDetailSaveMutation() {
+  return useInvalidatingMutation(
+    ({ id, payload }) => (id ? guideDetailsApi.update(id, payload) : guideDetailsApi.create(payload)),
+    [['guide-details']],
+  )
+}
+
+export function useGuideDetailMediaAppendMutation() {
+  return useInvalidatingMutation(
+    ({ id, files }) => guideDetailsApi.appendMedia(id, files),
+    [['guide-details']],
+  )
+}
+
+export function useGuideDetailMediaDeleteMutation() {
+  return useInvalidatingMutation(
+    ({ detailId, index }) => guideDetailsApi.removeMedia(detailId, index),
+    [['guide-details']],
+  )
+}
+
+export function useGuideDetailDeleteMutation() {
+  return useInvalidatingMutation(
+    (id) => guideDetailsApi.remove(id),
+    [['guide-details']],
   )
 }
 
@@ -280,6 +469,6 @@ export function useSettingsSaveMutation() {
 export function useDemoResetMutation() {
   return useInvalidatingMutation(
     demoApi.reset,
-    [['users'], ['queries'], ['recommendations'], ['products'], ['orders'], ['escalations'], ['notifications'], ['audit-logs'], ['tasks'], ['support-cases'], ['analytics'], ['settings']],
+    [['users'], ['queries'], ['recommendations'], ['products'], ['crop-diseases'], ['orders'], ['escalations'], ['notifications'], ['audit-logs'], ['tasks'], ['support-cases'], ['analytics'], ['settings']],
   )
 }

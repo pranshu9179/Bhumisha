@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { LockKeyhole } from 'lucide-react'
 import { useForm } from 'react-hook-form'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { Field } from '@/components/forms/field'
@@ -12,8 +12,10 @@ import { useResetPasswordMutation } from '@/services/api/hooks'
 
 const schema = z
   .object({
-    password: z.string().min(8, 'Password must be at least 8 characters'),
-    confirmPassword: z.string().min(8, 'Confirm your password'),
+    phone: z.string().regex(/^\d{10}$/, 'Phone number must be 10 digits'),
+    otp: z.string().regex(/^\d{6}$/, 'OTP must be 6 digits'),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    confirmPassword: z.string().min(6, 'Confirm your password'),
   })
   .refine((values) => values.password === values.confirmPassword, {
     message: 'Passwords must match',
@@ -21,6 +23,8 @@ const schema = z
   })
 
 export default function ResetPasswordPage() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const mutation = useResetPasswordMutation()
   const {
     register,
@@ -28,17 +32,28 @@ export default function ResetPasswordPage() {
     formState: { errors },
   } = useForm({
     resolver: zodResolver(schema),
+    defaultValues: {
+      phone: searchParams.get('phone') || '',
+      otp: '',
+      password: '',
+      confirmPassword: '',
+    },
   })
 
   const onSubmit = async (values) => {
-    const response = await mutation.mutateAsync(values)
-    toast.success(response.message)
+    try {
+      const response = await mutation.mutateAsync(values)
+      toast.success(response.message || 'Password changed successfully.')
+      navigate('/login')
+    } catch (error) {
+      toast.error(error.displayMessage || 'Unable to reset password.')
+    }
   }
 
   return (
     <AuthCard
       title="Reset password"
-      description="Mock reset screens let you validate form UX, field validation, and success states without sending real tokens."
+      description="Use the OTP generated for your registered phone number to set a new password."
       footer={
         <p className="text-sm text-slate-500">
           Return to the{' '}
@@ -49,6 +64,12 @@ export default function ResetPasswordPage() {
       }
     >
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+        <Field label="Phone number" error={errors.phone?.message}>
+          <Input inputMode="numeric" placeholder="9876543210" {...register('phone')} />
+        </Field>
+        <Field label="OTP" error={errors.otp?.message}>
+          <Input inputMode="numeric" placeholder="123456" {...register('otp')} />
+        </Field>
         <Field label="New password" error={errors.password?.message}>
           <Input type="password" placeholder="Set a strong password" {...register('password')} />
         </Field>

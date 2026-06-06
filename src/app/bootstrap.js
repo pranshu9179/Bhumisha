@@ -7,6 +7,9 @@ export function bootstrapApp() {
     return
   }
 
-  initializeMockApi()
+  if (import.meta.env.MODE === 'test' || import.meta.env.VITE_USE_MOCK_API === 'true') {
+    initializeMockApi()
+  }
+
   bootstrapped = true
 }

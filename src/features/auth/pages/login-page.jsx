@@ -14,8 +14,8 @@ import { useLoginMutation } from '@/services/api/hooks'
 import { setSession } from '@/store/auth-slice'
 
 const schema = z.object({
-  email: z.string().email('Enter a valid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  username: z.string().min(2, 'Username is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 })
 
 export default function LoginPage() {
@@ -30,7 +30,7 @@ export default function LoginPage() {
   } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
-      email: 'admin@bhumisha.test',
+      username: 'admin@bhumisha.test',
       password: 'Admin@123',
     },
   })
@@ -55,12 +55,26 @@ export default function LoginPage() {
       title="Sign in to Bhumisha Nexus"
       description="Use the seeded demo accounts to explore the role-based advisory and marketplace workflows."
       footer={
-        <p className="text-sm text-slate-500">
-          Need help accessing your workspace?{' '}
-          <Link to="/forgot-password" className="font-semibold text-primary">
-            Reset your password
-          </Link>
-        </p>
+        <div className="space-y-2 text-sm text-slate-500">
+          <p>
+            New user?{' '}
+            <Link to="/register" className="font-semibold text-primary">
+              Create an account
+            </Link>
+          </p>
+          <p>
+            Need help accessing your workspace?{' '}
+            <Link to="/forgot-password" className="font-semibold text-primary">
+              Reset your password
+            </Link>
+          </p>
+          <p>
+            Have an OTP?{' '}
+            <Link to="/verify-otp" className="font-semibold text-primary">
+              Verify account
+            </Link>
+          </p>
+        </div>
       }
     >
       <div className="rounded-2xl border border-accent/15 bg-accent/8 p-4 text-sm text-slate-600">
@@ -76,8 +90,8 @@ export default function LoginPage() {
       <DemoCredentials />
 
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-        <Field label="Work email" error={errors.email?.message}>
-          <Input placeholder="name@company.com" {...register('email')} />
+        <Field label="Username" error={errors.username?.message}>
+          <Input placeholder="Enter username" {...register('username')} />
         </Field>
         <Field label="Password" error={errors.password?.message}>
           <Input type="password" placeholder="Enter password" {...register('password')} />

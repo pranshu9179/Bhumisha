@@ -7,6 +7,8 @@ import { ProtectedRoute } from '@/routes/protected-route'
 import { RoleHomeRedirect } from '@/routes/role-home-redirect'
 
 const LoginPage = lazy(() => import('@/features/auth/pages/login-page'))
+const RegisterPage = lazy(() => import('@/features/auth/pages/register-page'))
+const VerifyOtpPage = lazy(() => import('@/features/auth/pages/verify-otp-page'))
 const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/forgot-password-page'))
 const ResetPasswordPage = lazy(() => import('@/features/auth/pages/reset-password-page'))
 const UnauthorizedPage = lazy(() => import('@/features/shared/pages/unauthorized-page'))
@@ -17,8 +19,12 @@ const UsersPage = lazy(() => import('@/features/admin/pages/people-pages').then(
 const ExpertsPage = lazy(() => import('@/features/admin/pages/people-pages').then((module) => ({ default: module.ExpertsPage })))
 const EmployeesPage = lazy(() => import('@/features/admin/pages/people-pages').then((module) => ({ default: module.EmployeesPage })))
 const VendorsPage = lazy(() => import('@/features/admin/pages/people-pages').then((module) => ({ default: module.VendorsPage })))
-const AdminProductsPage = lazy(() => import('@/features/admin/pages/catalog-pages').then((module) => ({ default: module.AdminProductsPage })))
-const CategoriesPage = lazy(() => import('@/features/admin/pages/catalog-pages').then((module) => ({ default: module.CategoriesPage })))
+const AdminProductsPage = lazy(() => import('@/features/admin/pages/catalog/admin-products-page'))
+const CategoriesPage = lazy(() => import('@/features/admin/pages/catalog/categories-page'))
+const CropDetailsPage = lazy(() => import('@/features/admin/pages/catalog/crop-details-page'))
+const GuideHeadingsPage = lazy(() => import('@/features/admin/pages/catalog/guide-headings-page'))
+const GuideDetailsPage = lazy(() => import('@/features/admin/pages/catalog/guide-details-page'))
+const CropDiseasesPage = lazy(() => import('@/features/admin/pages/catalog/crop-diseases-page'))
 const OrdersPage = lazy(() => import('@/features/admin/pages/operations-pages').then((module) => ({ default: module.OrdersPage })))
 const EscalationsPage = lazy(() => import('@/features/admin/pages/operations-pages').then((module) => ({ default: module.EscalationsPage })))
 const AuditLogsPage = lazy(() => import('@/features/admin/pages/operations-pages').then((module) => ({ default: module.AuditLogsPage })))
@@ -40,12 +46,12 @@ const EmployeeVendorSupportPage = lazy(() => import('@/features/employee/pages/v
 const EmployeeReportsPage = lazy(() => import('@/features/employee/pages/reports-page'))
 
 const VendorDashboardPage = lazy(() => import('@/features/vendor/pages/dashboard-page'))
-const VendorProductsPage = lazy(() => import('@/features/vendor/pages/catalog-pages').then((module) => ({ default: module.VendorProductsPage })))
-const VendorProductFormPage = lazy(() => import('@/features/vendor/pages/catalog-pages').then((module) => ({ default: module.VendorProductFormPage })))
-const VendorInventoryPage = lazy(() => import('@/features/vendor/pages/catalog-pages').then((module) => ({ default: module.VendorInventoryPage })))
-const VendorOrdersPage = lazy(() => import('@/features/vendor/pages/commerce-pages').then((module) => ({ default: module.VendorOrdersPage })))
-const VendorDispatchPage = lazy(() => import('@/features/vendor/pages/commerce-pages').then((module) => ({ default: module.VendorDispatchPage })))
-const VendorReportsPage = lazy(() => import('@/features/vendor/pages/commerce-pages').then((module) => ({ default: module.VendorReportsPage })))
+const VendorProductsPage = lazy(() => import('@/features/vendor/pages/catalog/vendor-products-page'))
+const VendorProductFormPage = lazy(() => import('@/features/vendor/pages/catalog/vendor-product-form-page'))
+const VendorInventoryPage = lazy(() => import('@/features/vendor/pages/catalog/vendor-inventory-page'))
+const VendorOrdersPage = lazy(() => import('@/features/vendor/pages/commerce/vendor-orders-page'))
+const VendorDispatchPage = lazy(() => import('@/features/vendor/pages/commerce/vendor-dispatch-page'))
+const VendorReportsPage = lazy(() => import('@/features/vendor/pages/commerce/vendor-reports-page'))
 
 function RouteFallback() {
   return (
@@ -67,6 +73,8 @@ export function AppRouter() {
         <Route path="/" element={<RoleHomeRedirect />} />
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/verify-otp" element={<VerifyOtpPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
@@ -86,6 +94,10 @@ export function AppRouter() {
           <Route path="vendors" element={<VendorsPage />} />
           <Route path="products" element={<AdminProductsPage />} />
           <Route path="categories" element={<CategoriesPage />} />
+          <Route path="crop-details" element={<CropDetailsPage />} />
+          <Route path="guide-headings" element={<GuideHeadingsPage />} />
+          <Route path="guide-details" element={<GuideDetailsPage />} />
+          <Route path="crop-diseases" element={<CropDiseasesPage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="escalations" element={<EscalationsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />

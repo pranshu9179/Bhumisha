@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Edit3, ShieldCheck, UserPlus } from 'lucide-react'
+import { Edit3, Power, ShieldCheck, UserPlus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -8,6 +8,7 @@ import { DataTable } from '@/components/data-table/data-table'
 import { Field } from '@/components/forms/field'
 import { StatusBadge } from '@/components/feedback/status-badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { PreviewableImage } from '@/components/media/previewable-image'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -16,15 +17,16 @@ import { DeleteActionButton } from '@/features/shared/components/delete-action-b
 import { PageHeader } from '@/features/shared/components/page-header'
 import { RecordDetailsDialog } from '@/features/shared/components/record-details-dialog'
 import { formatDate } from '@/lib/format'
-import { useUserDeleteMutation, useUserSaveMutation, useUsers } from '@/services/api/hooks'
+import { useUserDeleteMutation, useUserRoleMutation, useUserSaveMutation, useUserStatusToggleMutation, useUsers } from '@/services/api/hooks'
 
 const schema = z.object({
-  name: z.string().min(2, 'Name is required'),
-  email: z.string().email('Valid email required'),
+  name: z.string().optional(),
+  username: z.string().optional(),
+  email: z.string().email('Valid email required').or(z.literal('')).optional(),
   role: z.string().min(1, 'Role is required'),
   status: z.string().min(1, 'Status is required'),
   phone: z.string().min(8, 'Phone is required'),
-  region: z.string().min(2, 'Region is required'),
+  region: z.string().optional(),
   company: z.string().optional(),
   specialty: z.string().optional(),
   department: z.string().optional(),
@@ -40,6 +42,8 @@ function initials(name) {
 
 function UserDialog({ open, onOpenChange, initialUser, fixedRole }) {
   const mutation = useUserSaveMutation()
+  const roleMutation = useUserRoleMutation()
+  const statusMutation = useUserStatusToggleMutation()
   const {
     register,
     handleSubmit,
@@ -49,6 +53,7 @@ function UserDialog({ open, onOpenChange, initialUser, fixedRole }) {
     resolver: zodResolver(schema),
     defaultValues: {
       name: '',
+      username: '',
       email: '',
       role: fixedRole || 'employee',
       status: 'active',
@@ -64,6 +69,7 @@ function UserDialog({ open, onOpenChange, initialUser, fixedRole }) {
     if (open) {
       reset({
         name: initialUser?.name || '',
+        username: initialUser?.username || '',
         email: initialUser?.email || '',
         role: initialUser?.role || fixedRole || 'employee',
         status: initialUser?.status || 'active',
@@ -77,13 +83,26 @@ function UserDialog({ open, onOpenChange, initialUser, fixedRole }) {
   }, [fixedRole, initialUser, open, reset])
 
   const onSubmit = async (values) => {
+    const { role, status, ...profileValues } = values
+
     await mutation.mutateAsync({
       id: initialUser?.id,
-      payload: values,
+      payload: initialUser ? profileValues : values,
     })
+
+    if (initialUser?.id && role !== initialUser.role) {
+      await roleMutation.mutateAsync({ id: initialUser.id, role })
+    }
+
+    if (initialUser?.id && status !== initialUser.status) {
+      await statusMutation.mutateAsync(initialUser.id)
+    }
+
     toast.success(initialUser ? 'User updated successfully.' : 'User added successfully.')
     onOpenChange(false)
   }
+
+  const isSaving = mutation.isPending || roleMutation.isPending || statusMutation.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -95,6 +114,9 @@ function UserDialog({ open, onOpenChange, initialUser, fixedRole }) {
         <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit(onSubmit)}>
           <Field label="Name" error={errors.name?.message}>
             <Input {...register('name')} />
+          </Field>
+          <Field label="Username" error={errors.username?.message}>
+            <Input {...register('username')} />
           </Field>
           <Field label="Email" error={errors.email?.message}>
             <Input {...register('email')} />
@@ -131,8 +153,8 @@ function UserDialog({ open, onOpenChange, initialUser, fixedRole }) {
             <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Saving...' : 'Save user'}
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save user'}
             </Button>
           </div>
         </form>
@@ -152,6 +174,8 @@ function PeopleDirectoryPage({
   const [editingUser, setEditingUser] = useState(null)
   const { data = [] } = useUsers(roleFilter ? { role: roleFilter } : {})
   const mutation = useUserSaveMutation()
+  const roleMutation = useUserRoleMutation()
+  const statusMutation = useUserStatusToggleMutation()
   const deleteMutation = useUserDeleteMutation()
 
   const columns = useMemo(
@@ -161,17 +185,49 @@ function PeopleDirectoryPage({
         accessorKey: 'name',
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
-            <Avatar>
-              <AvatarFallback>{initials(row.original.name)}</AvatarFallback>
-            </Avatar>
+            {row.original.avatar || row.original.profile_image ? (
+              <PreviewableImage
+                src={row.original.avatar || row.original.profile_image}
+                alt={row.original.name || 'User profile'}
+                className="h-10 w-10 rounded-full object-cover"
+                fallbackClassName="h-10 w-10 rounded-full"
+                previewTitle={`${row.original.name || 'User'} profile image`}
+              />
+            ) : (
+              <Avatar>
+                <AvatarFallback>{initials(row.original.name)}</AvatarFallback>
+              </Avatar>
+            )}
             <div>
               <p className="font-semibold text-dark">{row.original.name}</p>
-              <p className="text-xs text-slate-400">{row.original.email}</p>
+              <p className="text-xs text-slate-400">{row.original.email || row.original.username || row.original.phone}</p>
             </div>
           </div>
         ),
       },
-      { header: 'Role', accessorKey: 'role' },
+      {
+        header: 'Role',
+        accessorKey: 'role',
+        cell: ({ row }) => (
+          <NativeSelect
+            value={row.original.role}
+            className="h-9 w-32 rounded-xl"
+            onClick={(event) => event.stopPropagation()}
+            onChange={(event) =>
+              roleMutation
+                .mutateAsync({ id: row.original.id, role: event.target.value })
+                .then(() => toast.success('Role updated successfully.'))
+            }
+            disabled={roleMutation.isPending}
+          >
+            <option value="admin">Admin</option>
+            <option value="expert">Expert</option>
+            <option value="employee">Employee</option>
+            <option value="vendor">Vendor</option>
+            <option value="user">User</option>
+          </NativeSelect>
+        ),
+      },
       {
         header: 'Status',
         accessorKey: verifyMode ? 'approvalStatus' : 'status',
@@ -195,6 +251,20 @@ function PeopleDirectoryPage({
               description="Profile data available for this workspace user."
               record={row.original}
             />
+            <Button
+              size="sm"
+              variant={row.original.status === 'active' ? 'secondary' : 'accent'}
+              onClick={(event) => {
+                event.stopPropagation()
+                return statusMutation
+                  .mutateAsync(row.original.id)
+                  .then(() => toast.success('User status updated successfully.'))
+              }}
+              disabled={statusMutation.isPending}
+            >
+              <Power className="h-4 w-4" />
+              {row.original.status === 'active' ? 'Disable' : 'Activate'}
+            </Button>
             <Button
               size="sm"
               variant="secondary"
@@ -236,7 +306,7 @@ function PeopleDirectoryPage({
         ),
       },
     ],
-    [deleteMutation, mutation, verifyMode],
+    [deleteMutation, mutation, roleMutation, statusMutation, verifyMode],
   )
 
   return (

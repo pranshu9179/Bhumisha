@@ -23,6 +23,7 @@ const map = {
   pending_review: 'warning',
   escalated: 'danger',
   critical: 'danger',
+  deleted: 'danger',
 }
 
 export function StatusBadge({ value }) {

@@ -17,6 +17,25 @@ function withStatusFilter(items, key, value) {
   return items.filter((item) => String(item[key]) === String(value))
 }
 
+function parsePayload(config) {
+  if (!config.data) return {}
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    return Object.fromEntries(config.data.entries())
+  }
+  if (typeof config.data === 'string') {
+    try {
+      return JSON.parse(config.data)
+    } catch {
+      return {}
+    }
+  }
+  return config.data
+}
+
+function normalizeRole(role) {
+  return String(role || '').toLowerCase()
+}
+
 function getAnalyticsOverview(role) {
   const db = loadMockDb()
   const totalRevenue = db.orders.reduce((sum, order) => sum + order.total, 0)
@@ -136,9 +155,10 @@ export function initializeMockApi() {
   const mock = new AxiosMockAdapter(apiClient, { delayResponse: 420 })
 
   mock.onPost('/auth/login').reply((config) => {
-    const { email, password } = JSON.parse(config.data)
+    const { email, username, password } = JSON.parse(config.data)
     const db = loadMockDb()
-    const user = db.users.find((item) => item.email === email && item.password === password)
+    const loginId = username || email
+    const user = db.users.find((item) => (item.email === loginId || item.username === loginId) && item.password === password)
 
     if (!user) {
       return [401, { message: 'Invalid email or password.' }]
@@ -162,8 +182,35 @@ export function initializeMockApi() {
     ]
   })
 
+  mock.onPost('/auth/logout').reply(200, {
+    success: true,
+    message: 'Logout successful',
+  })
+
+  mock.onPost('/auth/register').reply(201, {
+    message: 'Demo account created. Use the demo OTP to verify.',
+  })
+
+  mock.onPost('/auth/verify-otp').reply((config) => {
+    const { phone, otp } = JSON.parse(config.data)
+
+    if (!phone || !otp) {
+      return [400, { message: 'All fields are required' }]
+    }
+
+    return [200, { message: 'OTP verified successfully.' }]
+  })
+
   mock.onPost('/auth/forgot-password').reply(200, {
     message: 'Reset instructions were simulated. Check your demo inbox.',
+  })
+
+  mock.onPost('/auth/forget-password').reply(200, {
+    message: 'Password reset simulated successfully.',
+  })
+
+  mock.onPost('/auth/resend').reply(201, {
+    message: 'OTP generated for demo reset flow.',
   })
 
   mock.onPost('/auth/reset-password').reply(200, {
@@ -177,7 +224,7 @@ export function initializeMockApi() {
 
   mock.onGet('/users').reply((config) => {
     const db = loadMockDb()
-    const role = config.params?.role
+    const role = normalizeRole(config.params?.role)
     const approvalStatus = config.params?.approvalStatus
     let items = db.users.map((user) => ({ ...user, password: undefined }))
     items = withStatusFilter(items, 'role', role)
@@ -223,6 +270,56 @@ export function initializeMockApi() {
       channel: 'users',
     })
     return [200, { ...updated, password: undefined }]
+  })
+
+  mock.onPatch(/\/users\/role\/[^/]+$/).reply((config) => {
+    const userId = matchById(config.url, 3)
+    const payload = parsePayload(config)
+    const nextRole = normalizeRole(payload.role?.role || payload.role)
+    const updated = mutateMockDb((db) => {
+      const index = db.users.findIndex((item) => String(item.id) === String(userId))
+      if (index < 0) return null
+      db.users[index] = { ...db.users[index], role: nextRole }
+      return db.users[index]
+    })
+    if (!updated) return [404, { message: 'User not found.' }]
+    appendAuditLog({
+      actor: 'Admin Console',
+      action: 'Changed user role',
+      target: updated.name,
+      channel: 'users',
+    })
+    return [200, { success: true, message: 'User role updated successfully' }]
+  })
+
+  mock.onPatch(/\/users\/toggle-status\/[^/]+$/).reply((config) => {
+    const userId = matchById(config.url, 3)
+    const updated = mutateMockDb((db) => {
+      const index = db.users.findIndex((item) => String(item.id) === String(userId))
+      if (index < 0) return null
+      const nextInactive = db.users[index].status === 'active'
+      db.users[index] = {
+        ...db.users[index],
+        status: nextInactive ? 'inactive' : 'active',
+        is_delete: nextInactive ? 1 : 0,
+      }
+      return db.users[index]
+    })
+    if (!updated) return [404, { message: 'User not found.' }]
+    appendAuditLog({
+      actor: 'Admin Console',
+      action: 'Toggled user status',
+      target: updated.name,
+      channel: 'users',
+    })
+    return [
+      200,
+      {
+        success: true,
+        message: updated.status === 'inactive' ? 'User disabled successfully' : 'User enabled successfully',
+        is_delete: updated.status === 'inactive',
+      },
+    ]
   })
 
   mock.onDelete(/\/users\/[^/]+$/).reply((config) => {
@@ -390,6 +487,140 @@ export function initializeMockApi() {
       channel: 'catalog',
     })
     return removed ? [200, removed] : [404, { message: 'Product not found.' }]
+  })
+
+  mock.onGet('/crop-disease/').reply((config) => {
+    const db = loadMockDb()
+    let items = [...(db.cropDiseases || [])]
+    if (config.params?.status === 'true') {
+      items = items.filter((item) => Boolean(item.is_delete))
+    } else {
+      items = items.filter((item) => !item.is_delete)
+    }
+    items = withStatusFilter(items, 'crop_id', config.params?.crop_id)
+    return [
+      200,
+      {
+        success: true,
+        message: 'Crop diseases fetched successfully',
+        page: config.params?.page || 1,
+        limit: config.params?.limit || 10,
+        totalRecords: items.length,
+        totalPages: 1,
+        data: items.map((item) => ({
+          english: {
+            id: item.id,
+            crop_id: item.crop_id,
+            crop_name: item.crop_name,
+            medial_url: item.medial_url,
+            is_delete: item.is_delete,
+            title: item.title,
+            description: item.description,
+          },
+          hindi: {
+            id: item.id,
+            crop_id: item.crop_id,
+            crop_name: item.crop_name_hi || item.crop_name,
+            medial_url: item.medial_url,
+            is_delete: item.is_delete,
+            title: item.title_hi,
+            description: item.description_hi,
+          },
+        })),
+      },
+    ]
+  })
+
+  mock.onGet(/\/crop-disease\/[^/]+$/).reply((config) => {
+    const diseaseId = matchById(config.url, 2)
+    const db = loadMockDb()
+    const disease = (db.cropDiseases || []).find((item) => String(item.id) === String(diseaseId))
+    return disease ? [200, { success: true, data: disease }] : [404, { message: 'Disease not found.' }]
+  })
+
+  mock.onPost('/crop-disease/').reply((config) => {
+    const payload = parsePayload(config)
+    const created = mutateMockDb((db) => {
+      db.cropDiseases ||= []
+      const crop = db.products.find((item) => String(item.id) === String(payload.crop_id))
+      const record = {
+        id: createId('disease'),
+        crop_id: payload.crop_id,
+        crop_name: crop?.name || '',
+        title: payload.title || '',
+        title_hi: payload.title_hi || '',
+        description: payload.description || '',
+        description_hi: payload.description_hi || '',
+        medial_url: [],
+        is_delete: 0,
+      }
+      db.cropDiseases.unshift(record)
+      return record
+    })
+    appendAuditLog({
+      actor: 'Admin Console',
+      action: 'Created crop disease',
+      target: created.title,
+      channel: 'catalog',
+    })
+    return [201, { success: true, message: 'Crop disease created successfully', id: created.id }]
+  })
+
+  mock.onPut(/\/crop-disease\/[^/]+$/).reply((config) => {
+    const diseaseId = matchById(config.url, 2)
+    const payload = parsePayload(config)
+    const updated = mutateMockDb((db) => {
+      db.cropDiseases ||= []
+      const index = db.cropDiseases.findIndex((item) => String(item.id) === String(diseaseId))
+      if (index < 0) return null
+      const crop = db.products.find((item) => String(item.id) === String(payload.crop_id || db.cropDiseases[index].crop_id))
+      let retainedImages = db.cropDiseases[index].medial_url || []
+      if (payload.existing_medial_url) {
+        try {
+          retainedImages = JSON.parse(payload.existing_medial_url)
+        } catch {
+          retainedImages = [payload.existing_medial_url].filter(Boolean)
+        }
+      }
+      db.cropDiseases[index] = {
+        ...db.cropDiseases[index],
+        crop_id: payload.crop_id || db.cropDiseases[index].crop_id,
+        crop_name: crop?.name || db.cropDiseases[index].crop_name,
+        title: payload.title ?? db.cropDiseases[index].title,
+        title_hi: payload.title_hi ?? db.cropDiseases[index].title_hi,
+        description: payload.description ?? db.cropDiseases[index].description,
+        description_hi: payload.description_hi ?? db.cropDiseases[index].description_hi,
+        medial_url: retainedImages,
+      }
+      return db.cropDiseases[index]
+    })
+    if (!updated) return [404, { message: 'Disease not found.' }]
+    appendAuditLog({
+      actor: 'Admin Console',
+      action: 'Updated crop disease',
+      target: updated.title,
+      channel: 'catalog',
+    })
+    return [200, { success: true, message: 'Disease updated successfully' }]
+  })
+
+  mock.onDelete(/\/crop-disease\/[^/]+$/).reply((config) => {
+    const diseaseId = matchById(config.url, 2)
+    const updated = mutateMockDb((db) => {
+      db.cropDiseases ||= []
+      const index = db.cropDiseases.findIndex((item) => String(item.id) === String(diseaseId))
+      if (index < 0) return null
+      db.cropDiseases[index] = { ...db.cropDiseases[index], is_delete: 1 }
+      return db.cropDiseases[index]
+    })
+    if (!updated) return [404, { message: 'Disease not found.' }]
+    appendAuditLog({
+      actor: 'Admin Console',
+      action: 'Deleted crop disease',
+      target: updated.title,
+      channel: 'catalog',
+    })
+    return [200, { success: true, message: 'Disease deleted successfully' }]
   })
 
   mock.onGet('/categories').reply(() => {
