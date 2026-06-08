@@ -23,11 +23,62 @@ export function useQueries(params = {}) {
   })
 }
 
+export function useMyQueries(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.myQueries(params),
+    queryFn: () => queriesApi.myQueries(params),
+  })
+}
+
+export function usePublicQueries(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.publicQueries(params),
+    queryFn: () => queriesApi.publicFeed(params),
+  })
+}
+
+export function useStaffPendingQueries(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.staffPendingQueries(params),
+    queryFn: () => queriesApi.staffPending(params),
+  })
+}
+
+export function useStaffMyReplies(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.staffReplies(params),
+    queryFn: () => queriesApi.staffMyReplies(params),
+  })
+}
+
+export function useAdminQueries(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.adminQueries(params),
+    queryFn: () => queriesApi.adminAll(params),
+  })
+}
+
 export function useQueryDetail(id) {
   return useQuery({
     queryKey: queryKeys.queryDetail(id),
     queryFn: () => queriesApi.detail(id),
     enabled: Boolean(id),
+  })
+}
+
+export function useAdminQueryDetail(id) {
+  return useQuery({
+    queryKey: queryKeys.adminQueryDetail(id),
+    queryFn: () => queriesApi.adminDetail(id),
+    enabled: Boolean(id),
+  })
+}
+
+export function useAdminUserActivity(userId) {
+  return useQuery({
+    queryKey: queryKeys.adminUserActivity(userId),
+    queryFn: () => queriesApi.adminUserActivity(userId),
+    enabled: Boolean(userId),
   })
 }
 
@@ -407,6 +458,20 @@ export function useQueryUpdateMutation() {
   return useInvalidatingMutation(
     ({ id, payload }) => queriesApi.update(id, payload),
     [['queries'], ['audit-logs']],
+  )
+}
+
+export function useQueryCreateMutation() {
+  return useInvalidatingMutation(
+    (payload) => queriesApi.create(payload),
+    [['queries'], ['audit-logs'], ['analytics']],
+  )
+}
+
+export function useQueryReplyMutation() {
+  return useInvalidatingMutation(
+    ({ id, payload }) => queriesApi.reply(id, payload),
+    [['queries'], ['recommendations'], ['escalations'], ['audit-logs'], ['analytics']],
   )
 }
 

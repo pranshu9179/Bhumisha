@@ -22,7 +22,7 @@ export const guideHeadingSchema = z.object({
 export const guideDetailRowSchema = z.object({
   title: z.string().trim().min(2, 'English detail title is required'),
   title_hi: z.string().trim().optional(),
-  description: z.string().trim().min(2, 'English description is required'),
+  description: z.string().trim().optional(),
   description_hi: z.string().trim().optional(),
   media: z.any().optional(),
 })
@@ -38,7 +38,7 @@ export const guideDetailEditSchema = z.object({
   crops_guid_heading_id: z.string().min(1, 'Guide heading is required'),
   title: z.string().trim().min(2, 'English detail title is required'),
   title_hi: z.string().trim().optional(),
-  description: z.string().trim().min(2, 'English description is required'),
+  description: z.string().trim().optional(),
   description_hi: z.string().trim().optional(),
 })
 

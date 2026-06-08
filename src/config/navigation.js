@@ -82,6 +82,12 @@ export const navigationByRole = {
           icon: ShieldCheck,
         },
         {
+          title: "Queries",
+          description: "Review farmer query records, replies, and activity.",
+          path: "/admin/queries",
+          icon: ClipboardList,
+        },
+        {
           title: "Crop Categories",
           description: "Bilingual crop taxonomy and soft-delete controls.",
           path: "/admin/categories",

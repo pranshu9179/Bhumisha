@@ -19,6 +19,7 @@ const UsersPage = lazy(() => import('@/features/admin/pages/people-pages').then(
 const ExpertsPage = lazy(() => import('@/features/admin/pages/people-pages').then((module) => ({ default: module.ExpertsPage })))
 const EmployeesPage = lazy(() => import('@/features/admin/pages/people-pages').then((module) => ({ default: module.EmployeesPage })))
 const VendorsPage = lazy(() => import('@/features/admin/pages/people-pages').then((module) => ({ default: module.VendorsPage })))
+const AdminQueryManagementPage = lazy(() => import('@/features/admin/pages/query-management-page'))
 const AdminProductsPage = lazy(() => import('@/features/admin/pages/catalog/admin-products-page'))
 const CategoriesPage = lazy(() => import('@/features/admin/pages/catalog/categories-page'))
 const CropDetailsPage = lazy(() => import('@/features/admin/pages/catalog/crop-details-page'))
@@ -92,6 +93,7 @@ export function AppRouter() {
           <Route path="experts" element={<ExpertsPage />} />
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="vendors" element={<VendorsPage />} />
+          <Route path="queries" element={<AdminQueryManagementPage />} />
           <Route path="products" element={<AdminProductsPage />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="crop-details" element={<CropDetailsPage />} />

@@ -61,26 +61,26 @@ export function GuideDetailDialog({ open, onOpenChange, detail, crops = [], head
   }
 
   const onSubmit = async (values) => {
-    const payload = isEditing
-      ? {
-          crop_id: values.crop_id,
-          crops_guid_heading_id: values.crops_guid_heading_id,
-          title: values.title.trim(),
-          title_hi: values.title_hi?.trim() || undefined,
-          description: values.description.trim(),
-          description_hi: values.description_hi?.trim() || undefined,
-        }
-      : {
-          crop_id: values.crop_id,
-          crops_guid_heading_id: values.crops_guid_heading_id,
-          details: values.details.map((row) => ({
-            title: row.title.trim(),
-            title_hi: row.title_hi?.trim() || null,
-            description: row.description.trim(),
-            description_hi: row.description_hi?.trim() || null,
-          })),
-          media: values.details.map((row) => row.media),
-        }
+  const payload = isEditing
+  ? {
+      crop_id: values.crop_id,
+      crops_guid_heading_id: values.crops_guid_heading_id,
+      title: values.title.trim(),
+      title_hi: values.title_hi?.trim() || undefined,
+      description: values.description.trim(),
+      description_hi: values.description_hi?.trim() || undefined,
+    }
+  : {
+      crop_id: values.crop_id,
+      crops_guid_heading_id: values.crops_guid_heading_id,
+      details: values.details.map((row) => ({
+        title: row.title.trim(),
+        title_hi: row.title_hi?.trim() || null,
+        description: row.description?.trim() || null,
+        description_hi: row.description_hi?.trim() || null,
+      })),
+      media: values.details.map((row) => row.media),
+    }
 
     try {
       await mutation.mutateAsync({ id: detail?.id, payload })

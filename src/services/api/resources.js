@@ -284,6 +284,199 @@ function normalizeCropDisease(record) {
   };
 }
 
+function inferMediaType(item, url = "") {
+  const explicitType = typeof item === "object" ? item?.type || item?.resource_type : "";
+  if (explicitType) return String(explicitType).toLowerCase();
+  return /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url) ? "video" : "image";
+}
+
+function normalizeQueryMedia(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => normalizeQueryMedia(item)).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    try {
+      return normalizeQueryMedia(JSON.parse(value));
+    } catch {
+      const url = normalizeAssetUrl(value);
+      return url ? [{ url, type: inferMediaType(null, url) }] : [];
+    }
+  }
+  if (typeof value === "object") {
+    const url = normalizeAssetUrl(
+      firstPresent(
+        value.secure_url,
+        value.secureUrl,
+        value.url,
+        value.media_url,
+        value.image_url,
+        value.file_url,
+        value.path,
+        value.file_path,
+      ),
+    );
+    return url
+      ? [
+          {
+            ...value,
+            url,
+            type: inferMediaType(value, url),
+            public_id: value.public_id ?? value.publicId,
+            original_name: value.original_name ?? value.originalName ?? value.name,
+          },
+        ]
+      : [];
+  }
+  return [];
+}
+
+function normalizeQueryReply(record) {
+  const source = unwrapRecord(record) || {};
+  const id = firstPresent(source.reply_id, source.id, source._id);
+  const repliedAt = firstPresent(source.replied_at, source.created_at, source.createdAt);
+  const repliedBy = firstPresent(source.replied_by, source.responder_name, source.username);
+
+  return {
+    ...source,
+    id,
+    reply_id: id,
+    replyText: firstPresent(source.reply_text, source.replyText, source.text),
+    reply_text: firstPresent(source.reply_text, source.replyText, source.text),
+    media: normalizeQueryMedia(firstPresent(source.media_url, source.reply_media, source.media)),
+    media_url: normalizeQueryMedia(firstPresent(source.media_url, source.reply_media, source.media)),
+    responderType: firstPresent(source.responder_type, source.responderRole, source.responder_role),
+    responder_type: firstPresent(source.responder_type, source.responderRole, source.responder_role),
+    repliedBy,
+    replied_by: repliedBy,
+    responderAvatar: normalizedProfileImage(source.responder_avatar, source.avatar, source.profile_image),
+    responder_avatar: normalizedProfileImage(source.responder_avatar, source.avatar, source.profile_image),
+    createdAt: repliedAt,
+    created_at: repliedAt,
+    repliedAt,
+    replied_at: repliedAt,
+  };
+}
+
+function normalizeQuery(record) {
+  const source = unwrapRecord(record) || {};
+  const id = firstPresent(source.id, source.query_id, source._id);
+  const cropName = firstPresent(source.crop_name, source.cropName, source.crop);
+  const askedBy = firstPresent(source.asked_by, source.farmerName, source.username, source.user_name);
+  const createdAt = firstPresent(source.created_at, source.createdAt, source.query_created_at);
+  const confirmedAt = firstPresent(source.confirmed_at, source.confirmedAt);
+  const replyCount = Number(firstPresent(source.reply_count, source.total_replies, source.replyCount, 0));
+  const media = normalizeQueryMedia(firstPresent(source.media_url, source.media, source.files));
+  const queryText = firstPresent(source.query_text, source.queryText, source.description, source.issueType);
+
+  return {
+    ...source,
+    id,
+    query_id: id,
+    queryText,
+    query_text: queryText,
+    media,
+    media_url: media,
+    mediaType: firstPresent(source.media_type, source.mediaType, media.length ? "mixed" : "none"),
+    media_type: firstPresent(source.media_type, source.mediaType, media.length ? "mixed" : "none"),
+    status: String(source.status || "pending").toLowerCase(),
+    cropId: firstPresent(source.crop_id, source.cropId),
+    crop_id: firstPresent(source.crop_id, source.cropId),
+    cropName,
+    crop_name: cropName,
+    cropNameHi: firstPresent(source.crop_name_hi, source.cropNameHi),
+    crop_name_hi: firstPresent(source.crop_name_hi, source.cropNameHi),
+    cropThemeImage: normalizeAssetUrl(firstPresent(source.crop_theme_image, source.cropThemeImage)),
+    crop_theme_image: normalizeAssetUrl(firstPresent(source.crop_theme_image, source.cropThemeImage)),
+    askedBy,
+    asked_by: askedBy,
+    farmerName: askedBy || "Unknown user",
+    userId: firstPresent(source.user_id, source.userId),
+    user_id: firstPresent(source.user_id, source.userId),
+    userPhone: firstPresent(source.user_phone, source.userPhone),
+    user_phone: firstPresent(source.user_phone, source.userPhone),
+    userAvatar: normalizedProfileImage(source.user_avatar, source.profile_image, source.avatar),
+    user_avatar: normalizedProfileImage(source.user_avatar, source.profile_image, source.avatar),
+    replyCount,
+    reply_count: replyCount,
+    totalReplies: Number(firstPresent(source.total_replies, source.reply_count, source.totalReplies, replyCount)),
+    createdAt,
+    created_at: createdAt,
+    confirmedAt,
+    confirmed_at: confirmedAt,
+    issueType: queryText,
+    crop: cropName,
+    priority: source.priority || (String(source.status).toLowerCase() === "pending" ? "pending" : "confirmed"),
+    replies: (source.replies || []).map(normalizeQueryReply),
+  };
+}
+
+function normalizeQueryList(response) {
+  return listResult(response, normalizeQuery);
+}
+
+function normalizeQueryDetail(response) {
+  return normalizeQuery(unwrapRecord(response));
+}
+
+function normalizeStaffReply(record) {
+  const source = unwrapRecord(record) || {};
+  const query = normalizeQuery({
+    id: source.query_id,
+    query_text: source.query_text,
+    status: source.query_status,
+    created_at: source.query_created_at,
+    asked_by: source.asked_by,
+    user_avatar: source.user_avatar,
+    crop_name: source.crop_name,
+  });
+  const reply = normalizeQueryReply(source);
+
+  return {
+    ...source,
+    ...reply,
+    query,
+    queryId: query.id,
+    query_id: query.id,
+    queryText: query.queryText,
+    query_text: query.queryText,
+    queryStatus: query.status,
+    query_status: query.status,
+    cropName: query.cropName,
+    crop_name: query.cropName,
+    askedBy: query.askedBy,
+    asked_by: query.askedBy,
+  };
+}
+
+function normalizeStaffReplyList(response) {
+  return listResult(response, normalizeStaffReply);
+}
+
+function normalizeAdminQueryDetail(response) {
+  const source = unwrapRecord(response) || {};
+  const query = normalizeQuery(source.query || source);
+  return {
+    ...source,
+    query,
+    replies: (source.replies || query.replies || []).map(normalizeQueryReply),
+    statusHistory: source.status_history || source.statusHistory || [],
+    status_history: source.status_history || source.statusHistory || [],
+  };
+}
+
+function normalizeUserActivity(response) {
+  const source = unwrapRecord(response) || {};
+  return {
+    ...source,
+    user: source.user ? normalizeUser(source.user) : null,
+    queriesMade: (source.queries_made || source.queriesMade || []).map(normalizeQuery),
+    queries_made: (source.queries_made || source.queriesMade || []).map(normalizeQuery),
+    repliesGiven: (source.replies_given || source.repliesGiven || []).map(normalizeStaffReply),
+    replies_given: (source.replies_given || source.repliesGiven || []).map(normalizeStaffReply),
+  };
+}
+
 function normalizeMedia(value) {
   if (!value) return [];
   if (Array.isArray(value)) {
@@ -910,11 +1103,43 @@ export const usersApi = {
 };
 
 export const queriesApi = {
-  list: async (params = {}) =>
-    (await apiClient.get("/queries", { params })).data,
-  detail: async (id) => (await apiClient.get(`/queries/${id}`)).data,
+  create: async (payload) =>
+    unwrapRecord(
+      (
+        await apiClient.post(
+          "/queries",
+          toFormData(payload, ["files"]),
+        )
+      ).data,
+    ),
+  list: async (params = {}) => queriesApi.adminAll(params),
+  myQueries: async (params = {}) =>
+    normalizeQueryList((await apiClient.get("/queries/my-queries", { params })).data),
+  publicFeed: async (params = {}) =>
+    normalizeQueryList((await apiClient.get("/queries/public", { params })).data),
+  detail: async (id) =>
+    normalizeQueryDetail((await apiClient.get(`/queries/${id}`)).data),
+  staffPending: async (params = {}) =>
+    normalizeQueryList((await apiClient.get("/queries/staff/pending", { params })).data),
+  reply: async (id, payload) =>
+    unwrapRecord(
+      (
+        await apiClient.post(
+          `/queries/${id}/reply`,
+          toFormData(payload, ["files"]),
+        )
+      ).data,
+    ),
+  staffMyReplies: async (params = {}) =>
+    normalizeStaffReplyList((await apiClient.get("/queries/staff/my-replies", { params })).data),
+  adminAll: async (params = {}) =>
+    normalizeQueryList((await apiClient.get("/queries/admin/all", { params })).data),
+  adminDetail: async (id) =>
+    normalizeAdminQueryDetail((await apiClient.get(`/queries/admin/${id}/detail`)).data),
+  adminUserActivity: async (userId) =>
+    normalizeUserActivity((await apiClient.get(`/queries/admin/activity/${userId}`)).data),
   update: async (id, payload) =>
-    (await apiClient.put(`/queries/${id}`, payload)).data,
+    queriesApi.reply(id, { reply_text: payload.reply_text || payload.replyText || payload.actions || payload.summary }),
   remove: async (id) => (await apiClient.delete(`/queries/${id}`)).data,
 };
 
