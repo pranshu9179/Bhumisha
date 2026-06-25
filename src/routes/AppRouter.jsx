@@ -5,6 +5,7 @@ import { AuthLayout } from '@/layouts/auth-layout'
 import { AppLayout } from '@/layouts/app-layout'
 import { ProtectedRoute } from '@/routes/protected-route'
 import { RoleHomeRedirect } from '@/routes/role-home-redirect'
+import { useCurrentUser } from '@/hooks/use-current-user'
 
 const LoginPage = lazy(() => import('@/features/auth/pages/login-page'))
 const RegisterPage = lazy(() => import('@/features/auth/pages/register-page'))
@@ -21,36 +22,37 @@ const EmployeesPage = lazy(() => import('@/features/admin/pages/people-pages').t
 const VendorsPage = lazy(() => import('@/features/admin/pages/people-pages').then((module) => ({ default: module.VendorsPage })))
 const AdminQueryManagementPage = lazy(() => import('@/features/admin/pages/query-management-page'))
 const AdminProductsPage = lazy(() => import('@/features/admin/pages/catalog/admin-products-page'))
+const AdminProductListPage = lazy(() => import('@/features/expert/pages/support-pages').then((module) => ({ default: module.ExpertProductsPage })))
 const CategoriesPage = lazy(() => import('@/features/admin/pages/catalog/categories-page'))
-const CropDetailsPage = lazy(() => import('@/features/admin/pages/catalog/crop-details-page'))
 const GuideHeadingsPage = lazy(() => import('@/features/admin/pages/catalog/guide-headings-page'))
 const GuideDetailsPage = lazy(() => import('@/features/admin/pages/catalog/guide-details-page'))
 const CropDiseasesPage = lazy(() => import('@/features/admin/pages/catalog/crop-diseases-page'))
+const MarketplaceTaxonomyPage = lazy(() => import('@/features/admin/pages/marketplace-taxonomy-page'))
 const OrdersPage = lazy(() => import('@/features/admin/pages/operations-pages').then((module) => ({ default: module.OrdersPage })))
-const EscalationsPage = lazy(() => import('@/features/admin/pages/operations-pages').then((module) => ({ default: module.EscalationsPage })))
-const AuditLogsPage = lazy(() => import('@/features/admin/pages/operations-pages').then((module) => ({ default: module.AuditLogsPage })))
-const AnalyticsPage = lazy(() => import('@/features/admin/pages/insights-pages').then((module) => ({ default: module.AnalyticsPage })))
-const ReportsPage = lazy(() => import('@/features/admin/pages/insights-pages').then((module) => ({ default: module.ReportsPage })))
-const SettingsPage = lazy(() => import('@/features/admin/pages/insights-pages').then((module) => ({ default: module.SettingsPage })))
+const BrokeragePage = lazy(() => import('@/features/admin/pages/brokerage-page'))
+const MandiRatesPage = lazy(() => import('@/features/admin/pages/mandi-rates-page'))
+const SettlementsPage = lazy(() => import('@/features/admin/pages/settlements-page'))
+const GuideParentsPage = lazy(() => import('@/features/admin/pages/catalog/guide-parents-page'))
 
 const ExpertDashboardPage = lazy(() => import('@/features/expert/pages/dashboard-page'))
 const ExpertQueriesPage = lazy(() => import('@/features/expert/pages/query-pages').then((module) => ({ default: module.ExpertQueriesPage })))
 const ExpertQueryDetailPage = lazy(() => import('@/features/expert/pages/query-pages').then((module) => ({ default: module.ExpertQueryDetailPage })))
 const ExpertHistoryPage = lazy(() => import('@/features/expert/pages/query-pages').then((module) => ({ default: module.ExpertHistoryPage })))
 const ExpertProductsPage = lazy(() => import('@/features/expert/pages/support-pages').then((module) => ({ default: module.ExpertProductsPage })))
-const ExpertNotificationsPage = lazy(() => import('@/features/expert/pages/support-pages').then((module) => ({ default: module.ExpertNotificationsPage })))
 
 const EmployeeDashboardPage = lazy(() => import('@/features/employee/pages/dashboard-page'))
-const EmployeeTaskBoardPage = lazy(() => import('@/features/employee/pages/task-board-page'))
 const EmployeeMonitoringPage = lazy(() => import('@/features/employee/pages/monitoring-page'))
-const EmployeeVendorSupportPage = lazy(() => import('@/features/employee/pages/vendor-support-page'))
-const EmployeeReportsPage = lazy(() => import('@/features/employee/pages/reports-page'))
+
+const UserDashboardPage = lazy(() => import('@/features/user/pages/dashboard-page'))
+const BecomeVendorPage = lazy(() => import('@/features/user/pages/become-vendor-page'))
 
 const VendorDashboardPage = lazy(() => import('@/features/vendor/pages/dashboard-page'))
 const VendorProductsPage = lazy(() => import('@/features/vendor/pages/catalog/vendor-products-page'))
 const VendorProductFormPage = lazy(() => import('@/features/vendor/pages/catalog/vendor-product-form-page'))
 const VendorInventoryPage = lazy(() => import('@/features/vendor/pages/catalog/vendor-inventory-page'))
+const VendorStoreSetupPage = lazy(() => import('@/features/vendor/pages/commerce/vendor-store-setup-page'))
 const VendorOrdersPage = lazy(() => import('@/features/vendor/pages/commerce/vendor-orders-page'))
+const VendorCheckoutPage = lazy(() => import('@/features/vendor/pages/commerce/vendor-checkout-page'))
 const VendorDispatchPage = lazy(() => import('@/features/vendor/pages/commerce/vendor-dispatch-page'))
 const VendorReportsPage = lazy(() => import('@/features/vendor/pages/commerce/vendor-reports-page'))
 
@@ -67,11 +69,26 @@ function RouteFallback() {
   )
 }
 
+function CurrentUserProductsLayout() {
+  const user = useCurrentUser()
+  return <AppLayout role={user?.role || 'expert'} />
+}
+
 export function AppRouter() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/" element={<RoleHomeRedirect />} />
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoute>
+              <CurrentUserProductsLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<ExpertProductsPage />} />
+        </Route>
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -94,18 +111,19 @@ export function AppRouter() {
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="vendors" element={<VendorsPage />} />
           <Route path="queries" element={<AdminQueryManagementPage />} />
+          <Route path="queries/:id" element={<ExpertQueryDetailPage />} />
           <Route path="products" element={<AdminProductsPage />} />
+          <Route path="product-list" element={<AdminProductListPage />} />
           <Route path="categories" element={<CategoriesPage />} />
-          <Route path="crop-details" element={<CropDetailsPage />} />
           <Route path="guide-headings" element={<GuideHeadingsPage />} />
           <Route path="guide-details" element={<GuideDetailsPage />} />
           <Route path="crop-diseases" element={<CropDiseasesPage />} />
+          <Route path="marketplace-taxonomy" element={<MarketplaceTaxonomyPage />} />
           <Route path="orders" element={<OrdersPage />} />
-          <Route path="escalations" element={<EscalationsPage />} />
-          <Route path="analytics" element={<AnalyticsPage />} />
-          <Route path="reports" element={<ReportsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="audit-logs" element={<AuditLogsPage />} />
+          <Route path="mandi-rates" element={<MandiRatesPage />} />
+          <Route path="settlements" element={<SettlementsPage />} />
+          <Route path="brokerage" element={<BrokeragePage />} />
+          <Route path="guide-parents" element={<GuideParentsPage />} />
         </Route>
 
         <Route
@@ -121,7 +139,6 @@ export function AppRouter() {
           <Route path="queries/:id" element={<ExpertQueryDetailPage />} />
           <Route path="products" element={<ExpertProductsPage />} />
           <Route path="history" element={<ExpertHistoryPage />} />
-          <Route path="notifications" element={<ExpertNotificationsPage />} />
         </Route>
 
         <Route
@@ -133,10 +150,21 @@ export function AppRouter() {
           }
         >
           <Route index element={<EmployeeDashboardPage />} />
-          <Route path="tasks" element={<EmployeeTaskBoardPage />} />
           <Route path="monitoring" element={<EmployeeMonitoringPage />} />
-          <Route path="vendor-support" element={<EmployeeVendorSupportPage />} />
-          <Route path="reports" element={<EmployeeReportsPage />} />
+          <Route path="queries/:id" element={<ExpertQueryDetailPage />} />
+        </Route>
+
+        <Route
+          path="/user"
+          element={
+            <ProtectedRoute role="user">
+              <AppLayout role="user" />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<UserDashboardPage />} />
+          <Route path="checkout" element={<VendorCheckoutPage />} />
+          <Route path="become-vendor" element={<BecomeVendorPage />} />
         </Route>
 
         <Route
@@ -149,10 +177,12 @@ export function AppRouter() {
         >
           <Route index element={<VendorDashboardPage />} />
           <Route path="products" element={<VendorProductsPage />} />
+          <Route path="store-setup" element={<VendorStoreSetupPage />} />
           <Route path="products/new" element={<VendorProductFormPage />} />
           <Route path="products/:id/edit" element={<VendorProductFormPage />} />
           <Route path="inventory" element={<VendorInventoryPage />} />
           <Route path="orders" element={<VendorOrdersPage />} />
+          <Route path="checkout" element={<VendorCheckoutPage />} />
           <Route path="dispatch" element={<VendorDispatchPage />} />
           <Route path="reports" element={<VendorReportsPage />} />
         </Route>

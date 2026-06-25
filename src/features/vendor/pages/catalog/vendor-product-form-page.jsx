@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Field } from '@/components/forms/field'
@@ -8,47 +8,84 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { NativeSelect } from '@/components/ui/native-select'
+import { Textarea } from '@/components/ui/textarea'
+import { PreviewableImage } from '@/components/media/previewable-image'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { useCurrentUser } from '@/hooks/use-current-user'
-import { useCategories, useProductDetail, useProductSaveMutation } from '@/services/api/hooks'
+import { useProductCategories, useProductSubcategories, useShopProductDetail, useShopProductSaveMutation } from '@/services/api/hooks'
 import { vendorProductSchema } from '@/features/vendor/pages/catalog/vendor-product-schema'
 
 export function VendorProductFormPage() {
   const user = useCurrentUser()
   const navigate = useNavigate()
   const { id } = useParams()
-  const { data: categories = [] } = useCategories()
-  const { data: product } = useProductDetail(id)
-  const mutation = useProductSaveMutation()
+  const { data: categories = [] } = useProductCategories()
+  const { data: subcategories = [] } = useProductSubcategories()
+  const { data: product } = useShopProductDetail(id)
+  const mutation = useShopProductSaveMutation()
   const {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(vendorProductSchema),
     defaultValues: {
       name: '',
-      categoryId: '',
-      sku: '',
-      price: 0,
+      description: '',
+      category_id: '',
+      sub_category_id: '',
+      // product_type: 'organic',
+      price: '',
+      mrp: 0,
+      vendor_price: 0,
       stock: 0,
+      image: undefined,
+      tags: '',
       status: 'draft',
     },
   })
+  const selectedImages = useWatch({ control, name: 'image' })
+  const selectedImageCount = selectedImages?.length || 0
 
   useEffect(() => {
     if (product && id) {
-      reset(product)
+      reset({
+        ...product,
+        category_id: product.category_id || product.categoryId || '',
+        sub_category_id: product.sub_category_id || product.subCategoryId || '',
+        // product_type: product.product_type || product.productType || 'organic',
+        tags: Array.isArray(product.tags) ? product.tags.join(', ') : product.tags || '',
+        image: undefined,
+      })
     }
   }, [id, product, reset])
 
   const onSubmit = async (values) => {
+    const tags = values.tags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+
     await mutation.mutateAsync({
       id,
       payload: {
-        ...values,
+        name: values.name,
+        description: values.description,
+        price: values.price === '' ? undefined : values.price,
+        mrp: values.mrp,
+        vendor_price: values.vendor_price,
+        stock: values.stock,
+        image: values.image,
+        tags: JSON.stringify(tags),
+        retained_images: id ? product?.retained_images || product?.images || [] : undefined,
+        category_id: values.category_id ? Number(values.category_id) : undefined,
+        sub_category_id: values.sub_category_id ? Number(values.sub_category_id) : undefined,
+        // product_type: values.product_type,
+        status: values.status || 'published',
         vendorId: user.id,
+        vendor_id: user.id,
       },
     })
     toast.success(id ? 'Product updated successfully.' : 'Product created successfully.')
@@ -60,18 +97,63 @@ export function VendorProductFormPage() {
       <PageHeader
         eyebrow="Catalog editor"
         title={id ? 'Edit product' : 'Add product'}
-        description="Create or refine product listings that will appear in the marketplace and expert suggestion catalog."
+        description="Create or refine product listings using the documented product fields."
         compact
       />
-      <Card>
+      <Card className="max-w-5xl">
         <CardContent className="p-6">
           <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit(onSubmit)}>
-            <Field label="Product name" error={errors.name?.message}>
+            <Field label="PRODUCT NAME" error={errors.name?.message} className="md:col-span-2">
               <Input {...register('name')} />
             </Field>
-            <Field label="Category" error={errors.categoryId?.message}>
-              <NativeSelect {...register('categoryId')}>
-                <option value="">Select category</option>
+            <Field label="DESCRIPTION" error={errors.description?.message} className="md:col-span-2">
+              <Textarea rows={4} {...register('description')} />
+            </Field>
+            <div className="grid gap-4 md:col-span-2 md:grid-cols-3">
+              <Field label="MRP (INR) *" error={errors.mrp?.message}>
+                <Input type="number" {...register('mrp')} />
+              </Field>
+              <Field label="MIN VENDOR PRICE (LEAST TO RECEIVE) *" error={errors.vendor_price?.message}>
+                <Input type="number" {...register('vendor_price')} />
+              </Field>
+              <Field label="SELLING PRICE (INR)" error={errors.price?.message}>
+                <Input type="number" placeholder="Set by Admin" readOnly {...register('price')} />
+              </Field>
+            </div>
+            <Field label="STOCK" error={errors.stock?.message} className="md:col-span-2">
+              <Input type="number" {...register('stock')} />
+            </Field>
+            {/* <Field label="Product type" error={errors.product_type?.message}>
+              <NativeSelect {...register('product_type')}>
+                <option value="organic">Organic</option>
+                <option value="general">General</option>
+              </NativeSelect>
+            </Field> */}
+            <Field
+              label="Product Images (तस्वीरें)"
+              hint={`Total images selected: ${selectedImageCount} / 10`}
+              error={errors.image?.message}
+              className="md:col-span-2 rounded-lg border border-slate-200 p-3"
+            >
+              <div className="rounded-lg border border-dashed border-slate-400 bg-white p-3 text-center">
+                <Input type="file" accept="image/jpeg,image/png,image/jpg,image/webp" multiple {...register('image')} />
+              </div>
+            </Field>
+            {id && (product?.image_url || product?.image) ? (
+              <div className="md:col-span-2">
+                <p className="mb-2 text-sm font-medium text-slate-500">Current image</p>
+                <PreviewableImage
+                  src={product.image_url || product.image}
+                  alt={product.name || 'Product image'}
+                  className="h-28 w-36 rounded-lg object-cover"
+                  fallbackClassName="h-28 w-36 rounded-lg"
+                  previewTitle={`${product.name || 'Product'} image`}
+                />
+              </div>
+            ) : null}
+            <Field label="PRODUCT CATEGORY *" error={errors.category_id?.message} className="md:col-span-2">
+              <NativeSelect {...register('category_id')}>
+                <option value="">Select an option</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
@@ -79,28 +161,32 @@ export function VendorProductFormPage() {
                 ))}
               </NativeSelect>
             </Field>
-            <Field label="SKU" error={errors.sku?.message}>
-              <Input {...register('sku')} />
+            <Field label="SUBCATEGORY" error={errors.sub_category_id?.message} className="md:col-span-2">
+              <NativeSelect {...register('sub_category_id')}>
+                <option value="">Select subcategory</option>
+                {subcategories.map((subcategory) => (
+                  <option key={subcategory.id} value={subcategory.id}>
+                    {subcategory.name}
+                  </option>
+                ))}
+              </NativeSelect>
             </Field>
-            <Field label="Price" error={errors.price?.message}>
-              <Input type="number" {...register('price')} />
+            <Field label="SEARCH TAGS (COMMA SEPARATED)" hint="Comma-separated tags, e.g. seeds, organic, wheat" error={errors.tags?.message} className="md:col-span-2">
+              <Input {...register('tags')} />
             </Field>
-            <Field label="Stock" error={errors.stock?.message}>
-              <Input type="number" {...register('stock')} />
-            </Field>
-            <Field label="Status" error={errors.status?.message}>
+            {/* <Field label="Status" error={errors.status?.message}>
               <NativeSelect {...register('status')}>
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>
                 <option value="pending_review">Pending review</option>
               </NativeSelect>
-            </Field>
+            </Field> */}
             <div className="flex justify-end gap-3 md:col-span-2">
               <Button type="button" variant="secondary" onClick={() => navigate('/vendor/products')}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending ? 'Saving...' : id ? 'Save changes' : 'Create product'}
+              <Button type="submit" disabled={mutation.isPending} className="w-full">
+                {mutation.isPending ? 'Saving...' : id ? 'Save Product Listing' : 'Save Product Listing'}
               </Button>
             </div>
           </form>

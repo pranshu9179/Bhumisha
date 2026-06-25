@@ -3,21 +3,19 @@ import { StatusBadge } from '@/components/feedback/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/features/shared/components/page-header'
-import { useCurrentUser } from '@/hooks/use-current-user'
 import { formatCurrency } from '@/lib/format'
 import { useOrderUpdateMutation, useOrders } from '@/services/api/hooks'
 
 export function VendorDispatchPage() {
-  const user = useCurrentUser()
-  const { data: orders = [] } = useOrders({ vendorId: user?.id })
+  const { data: orders = [] } = useOrders()
   const mutation = useOrderUpdateMutation()
 
-  const dispatchable = orders.filter((order) => order.fulfillmentStatus !== 'delivered')
+  const dispatchable = orders.filter((order) => String(order.fulfillmentStatus).toLowerCase() !== 'delivered')
 
   const updateOrder = async (orderId, status) => {
     await mutation.mutateAsync({
       id: orderId,
-      payload: { fulfillmentStatus: status },
+      payload: { orderStatus: status },
     })
     toast.success(`Order moved to ${status}.`)
   }
@@ -43,13 +41,13 @@ export function VendorDispatchPage() {
               </div>
               <p className="text-lg font-semibold text-dark">{formatCurrency(order.total)}</p>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="secondary" onClick={() => updateOrder(order.id, 'processing')}>
+                <Button size="sm" variant="secondary" onClick={() => updateOrder(order.id, 'Processing')}>
                   Processing
                 </Button>
-                <Button size="sm" onClick={() => updateOrder(order.id, 'dispatched')}>
-                  Dispatch
+                <Button size="sm" onClick={() => updateOrder(order.id, 'Shipped')}>
+                  Ship
                 </Button>
-                <Button size="sm" variant="accent" onClick={() => updateOrder(order.id, 'delivered')}>
+                <Button size="sm" variant="accent" onClick={() => updateOrder(order.id, 'Delivered')}>
                   Deliver
                 </Button>
               </div>

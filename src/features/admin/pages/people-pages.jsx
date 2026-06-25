@@ -1,36 +1,43 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Edit3, Power, ShieldCheck, UserPlus } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { ImageUp, Plus, Power, UserPlus } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { DataTable } from '@/components/data-table/data-table'
-import { Field } from '@/components/forms/field'
 import { StatusBadge } from '@/components/feedback/status-badge'
+import { Field } from '@/components/forms/field'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { PreviewableImage } from '@/components/media/previewable-image'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { NativeSelect } from '@/components/ui/native-select'
-import { DeleteActionButton } from '@/features/shared/components/delete-action-button'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { RecordDetailsDialog } from '@/features/shared/components/record-details-dialog'
+import { VendorRegistrationForm } from '@/features/vendor/pages/commerce/vendor-store-setup-page'
 import { formatDate } from '@/lib/format'
-import { useUserDeleteMutation, useUserRoleMutation, useUserSaveMutation, useUserStatusToggleMutation, useUsers } from '@/services/api/hooks'
+import { useAdminUserCreateMutation, useUserRoleMutation, useUserStatusToggleMutation, useUsers } from '@/services/api/hooks'
 
-const schema = z.object({
-  name: z.string().optional(),
-  username: z.string().optional(),
-  email: z.string().email('Valid email required').or(z.literal('')).optional(),
-  role: z.string().min(1, 'Role is required'),
-  status: z.string().min(1, 'Status is required'),
-  phone: z.string().min(8, 'Phone is required'),
-  region: z.string().optional(),
-  company: z.string().optional(),
-  specialty: z.string().optional(),
-  department: z.string().optional(),
+const createUserSchema = z.object({
+  username: z.string().trim().min(2, 'Username is required'),
+  phone: z.string().regex(/^\d{10}$/, 'Phone number must be 10 digits'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  role: z.enum(['Vendor', 'Expert', 'Employee']),
+  profile_image: z
+    .any()
+    .optional()
+    .refine((files) => !files?.length || files[0].size <= 50 * 1024 * 1024, 'Profile image must be 50MB or smaller'),
 })
+
+function toApiCreateRole(role) {
+  const roleMap = {
+    vendor: 'Vendor',
+    expert: 'Expert',
+    employee: 'Employee',
+  }
+  return roleMap[String(role || '').toLowerCase()] || 'Expert'
+}
 
 function initials(name) {
   return name
@@ -40,143 +47,115 @@ function initials(name) {
     .slice(0, 2)
 }
 
-function UserDialog({ open, onOpenChange, initialUser, fixedRole }) {
-  const mutation = useUserSaveMutation()
-  const roleMutation = useUserRoleMutation()
-  const statusMutation = useUserStatusToggleMutation()
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(schema),
+function CreateUserDialog({ defaultRole = 'Expert' }) {
+  const [open, setOpen] = useState(false)
+  const mutation = useAdminUserCreateMutation()
+  const form = useForm({
+    resolver: zodResolver(createUserSchema),
     defaultValues: {
-      name: '',
       username: '',
-      email: '',
-      role: fixedRole || 'employee',
-      status: 'active',
       phone: '',
-      region: '',
-      company: '',
-      specialty: '',
-      department: '',
+      password: '',
+      role: defaultRole,
+      profile_image: undefined,
     },
   })
 
-  useEffect(() => {
-    if (open) {
-      reset({
-        name: initialUser?.name || '',
-        username: initialUser?.username || '',
-        email: initialUser?.email || '',
-        role: initialUser?.role || fixedRole || 'employee',
-        status: initialUser?.status || 'active',
-        phone: initialUser?.phone || '',
-        region: initialUser?.region || '',
-        company: initialUser?.company || '',
-        specialty: initialUser?.specialty || '',
-        department: initialUser?.department || '',
+  const handleOpenChange = (nextOpen) => {
+    setOpen(nextOpen)
+    if (nextOpen) {
+      form.reset({
+        username: '',
+        phone: '',
+        password: '',
+        role: defaultRole,
+        profile_image: undefined,
       })
     }
-  }, [fixedRole, initialUser, open, reset])
-
-  const onSubmit = async (values) => {
-    const { role, status, ...profileValues } = values
-
-    await mutation.mutateAsync({
-      id: initialUser?.id,
-      payload: initialUser ? profileValues : values,
-    })
-
-    if (initialUser?.id && role !== initialUser.role) {
-      await roleMutation.mutateAsync({ id: initialUser.id, role })
-    }
-
-    if (initialUser?.id && status !== initialUser.status) {
-      await statusMutation.mutateAsync(initialUser.id)
-    }
-
-    toast.success(initialUser ? 'User updated successfully.' : 'User added successfully.')
-    onOpenChange(false)
   }
 
-  const isSaving = mutation.isPending || roleMutation.isPending || statusMutation.isPending
+  const onSubmit = async (values) => {
+    try {
+      await mutation.mutateAsync(values)
+      toast.success(`${values.role} account created successfully.`)
+      handleOpenChange(false)
+    } catch (error) {
+      toast.error(error.displayMessage || 'Unable to create account.')
+    }
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{initialUser ? 'Edit user profile' : 'Add new user'}</DialogTitle>
-          <DialogDescription>Manage access-ready demo users for role-based workflows.</DialogDescription>
-        </DialogHeader>
-        <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit(onSubmit)}>
-          <Field label="Name" error={errors.name?.message}>
-            <Input {...register('name')} />
-          </Field>
-          <Field label="Username" error={errors.username?.message}>
-            <Input {...register('username')} />
-          </Field>
-          <Field label="Email" error={errors.email?.message}>
-            <Input {...register('email')} />
-          </Field>
-          <Field label="Role" error={errors.role?.message}>
-            <NativeSelect {...register('role')} disabled={Boolean(fixedRole)}>
-              <option value="admin">Admin</option>
-              <option value="expert">Expert</option>
-              <option value="employee">Employee</option>
-              <option value="vendor">Vendor</option>
-            </NativeSelect>
-          </Field>
-          <Field label="Status" error={errors.status?.message}>
-            <NativeSelect {...register('status')}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </NativeSelect>
-          </Field>
-          <Field label="Phone" error={errors.phone?.message}>
-            <Input {...register('phone')} />
-          </Field>
-          <Field label="Region" error={errors.region?.message}>
-            <Input {...register('region')} />
-          </Field>
-          <Field label="Company">
-            <Input {...register('company')} />
-          </Field>
-          <Field label="Specialty / Department">
-            <Input
-              {...register(fixedRole === 'expert' ? 'specialty' : fixedRole === 'employee' ? 'department' : 'company')}
-            />
-          </Field>
-          <div className="md:col-span-2 flex justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save user'}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Button type="button" onClick={() => handleOpenChange(true)}>
+        <Plus className="h-4 w-4" />
+        Add user
+      </Button>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Create user</DialogTitle>
+            <DialogDescription>Create a vendor, expert, or employee account using the documented register API.</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+            <Field label="Username" error={form.formState.errors.username?.message}>
+              <Input placeholder="Enter username" {...form.register('username')} />
+            </Field>
+            <Field label="Phone number" error={form.formState.errors.phone?.message}>
+              <Input inputMode="numeric" placeholder="9876543210" {...form.register('phone')} />
+            </Field>
+            <Field label="Password" error={form.formState.errors.password?.message}>
+              <Input type="password" placeholder="Minimum 6 characters" {...form.register('password')} />
+            </Field>
+            <Field label="Role" error={form.formState.errors.role?.message}>
+              <NativeSelect {...form.register('role')}>
+                <option value="Vendor">Vendor</option>
+                <option value="Expert">Expert</option>
+                <option value="Employee">Employee</option>
+              </NativeSelect>
+            </Field>
+            <Field label="Profile image" hint="Optional JPEG, PNG, or JPG up to 50MB." error={form.formState.errors.profile_image?.message}>
+              <div className="relative">
+                <ImageUp className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input className="pl-11" type="file" accept="image/jpeg,image/png,image/jpg" {...form.register('profile_image')} />
+              </div>
+            </Field>
+            <div className="flex justify-end">
+              <Button type="submit" disabled={mutation.isPending}>
+                <UserPlus className="h-4 w-4" />
+                {mutation.isPending ? 'Creating...' : 'Create user'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
-function PeopleDirectoryPage({
-  title,
-  description,
-  roleFilter,
-  verifyMode = false,
-  actionLabel = 'Add user',
-}) {
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState(null)
+function PeopleDirectoryPage({ title, description, roleFilter, verifyMode = false }) {
   const { data = [] } = useUsers(roleFilter ? { role: roleFilter } : {})
-  const mutation = useUserSaveMutation()
   const roleMutation = useUserRoleMutation()
   const statusMutation = useUserStatusToggleMutation()
-  const deleteMutation = useUserDeleteMutation()
+  const createDefaultRole = toApiCreateRole(roleFilter)
+  const [vendorRegistrationUser, setVendorRegistrationUser] = useState(null)
+
+  const handleRoleChange = useCallback(
+    async (user, nextRole) => {
+      if (nextRole === user.role) return
+      if (nextRole === 'vendor') {
+        setVendorRegistrationUser(user)
+        return
+      }
+
+      try {
+        await roleMutation.mutateAsync({ id: user.id, role: nextRole })
+        toast.success('Role updated successfully.')
+      } catch (error) {
+        toast.error(error.displayMessage || 'Unable to update role.')
+      }
+    },
+    [roleMutation],
+  )
 
   const columns = useMemo(
     () => [
@@ -213,11 +192,7 @@ function PeopleDirectoryPage({
             value={row.original.role}
             className="h-9 w-32 rounded-xl"
             onClick={(event) => event.stopPropagation()}
-            onChange={(event) =>
-              roleMutation
-                .mutateAsync({ id: row.original.id, role: event.target.value })
-                .then(() => toast.success('Role updated successfully.'))
-            }
+            onChange={(event) => handleRoleChange(row.original, event.target.value)}
             disabled={roleMutation.isPending}
           >
             <option value="admin">Admin</option>
@@ -238,7 +213,7 @@ function PeopleDirectoryPage({
       {
         header: 'Last active',
         accessorKey: 'lastActive',
-        cell: ({ row }) => formatDate(row.original.lastActive, 'DD MMM · hh:mm A'),
+        cell: ({ row }) => formatDate(row.original.lastActive, 'DD MMM - hh:mm A'),
       },
       {
         header: 'Actions',
@@ -248,7 +223,7 @@ function PeopleDirectoryPage({
           <div className="flex items-center gap-2">
             <RecordDetailsDialog
               title={`${row.original.name} details`}
-              description="Profile data available for this workspace user."
+              description="Profile data returned by the documented users endpoint."
               record={row.original}
             />
             <Button
@@ -265,48 +240,11 @@ function PeopleDirectoryPage({
               <Power className="h-4 w-4" />
               {row.original.status === 'active' ? 'Disable' : 'Activate'}
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={(event) => {
-                event.stopPropagation()
-                setEditingUser(row.original)
-                setDialogOpen(true)
-              }}
-            >
-              <Edit3 className="h-4 w-4" />
-              Edit
-            </Button>
-            <DeleteActionButton
-              confirmMessage={`Delete ${row.original.name} from the demo workspace?`}
-              onDelete={() =>
-                deleteMutation
-                  .mutateAsync(row.original.id)
-                  .then(() => toast.success('User deleted successfully.'))
-              }
-            />
-            {verifyMode ? (
-              <Button
-                size="sm"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  return mutation
-                    .mutateAsync({
-                      id: row.original.id,
-                      payload: { approvalStatus: 'approved', status: 'active' },
-                    })
-                    .then(() => toast.success('Vendor approved.'))
-                }}
-              >
-                <ShieldCheck className="h-4 w-4" />
-                Approve
-              </Button>
-            ) : null}
           </div>
         ),
       },
     ],
-    [deleteMutation, mutation, roleMutation, statusMutation, verifyMode],
+    [handleRoleChange, roleMutation.isPending, statusMutation, verifyMode],
   )
 
   return (
@@ -315,18 +253,8 @@ function PeopleDirectoryPage({
         eyebrow="Admin workspace"
         title={title}
         description={description}
+        actions={<CreateUserDialog defaultRole={createDefaultRole} />}
         compact
-        actions={
-          <Button
-            onClick={() => {
-              setEditingUser(null)
-              setDialogOpen(true)
-            }}
-          >
-            <UserPlus className="h-4 w-4" />
-            {actionLabel}
-          </Button>
-        }
       />
 
       <DataTable
@@ -336,12 +264,30 @@ function PeopleDirectoryPage({
         emptyMessage={`No ${title.toLowerCase()} available.`}
       />
 
-      <UserDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        initialUser={editingUser}
-        fixedRole={roleFilter}
-      />
+      <Dialog open={Boolean(vendorRegistrationUser)} onOpenChange={(open) => !open && setVendorRegistrationUser(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Register vendor profile</DialogTitle>
+            <DialogDescription>
+              Complete the vendor registration form before changing {vendorRegistrationUser?.name || 'this user'} to a vendor account.
+            </DialogDescription>
+          </DialogHeader>
+          {vendorRegistrationUser ? (
+            <VendorRegistrationForm
+              key={vendorRegistrationUser.id}
+              loadProfile={false}
+              targetUser={vendorRegistrationUser}
+              showHeader={false}
+              frame={false}
+              submitLabel="Create vendor account"
+              successMessage="Vendor account created successfully."
+              onSuccess={() => {
+                setVendorRegistrationUser(null)
+              }}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -350,7 +296,7 @@ export function UsersPage() {
   return (
     <PeopleDirectoryPage
       title="User directory"
-      description="Manage all demo accounts, role assignments, activation status, and contact details."
+      description="View users and use documented role/status endpoints."
     />
   )
 }
@@ -359,9 +305,8 @@ export function ExpertsPage() {
   return (
     <PeopleDirectoryPage
       title="Expert network"
-      description="Track agronomy experts, specialties, and current advisory staffing coverage."
+      description="View experts and manage documented account status controls."
       roleFilter="expert"
-      actionLabel="Add expert"
     />
   )
 }
@@ -370,9 +315,8 @@ export function EmployeesPage() {
   return (
     <PeopleDirectoryPage
       title="Employee operations"
-      description="Coordinate support staff, monitoring specialists, and vendor support owners."
+      description="View employees and manage documented account status controls."
       roleFilter="employee"
-      actionLabel="Add employee"
     />
   )
 }
@@ -381,10 +325,9 @@ export function VendorsPage() {
   return (
     <PeopleDirectoryPage
       title="Vendor verification"
-      description="Approve marketplace vendors, review KYC-like metadata, and activate their storefront workspace."
+      description="View vendor accounts returned by documented user APIs."
       roleFilter="vendor"
       verifyMode
-      actionLabel="Add vendor"
     />
   )
 }

@@ -1,5 +1,6 @@
-import { Activity, Eye } from 'lucide-react'
+import { Activity, Eye, MessageSquare } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { DataTable } from '@/components/data-table/data-table'
 import { StatusBadge } from '@/components/feedback/status-badge'
@@ -7,13 +8,14 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { NativeSelect } from '@/components/ui/native-select'
 import { DeleteActionButton } from '@/features/shared/components/delete-action-button'
+import { HashtagText } from '@/features/shared/components/hashtag-text'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { RecordDetailsDialog } from '@/features/shared/components/record-details-dialog'
 import { formatDate } from '@/lib/format'
 import { useAdminQueries, useAdminQueryDetail, useAdminUserActivity, useProducts, useQueryDeleteMutation } from '@/services/api/hooks'
 
 function TruncatedText({ value }) {
-  return <p className="max-w-md truncate">{value || '-'}</p>
+  return <p className="max-w-md truncate"><HashtagText text={value} /></p>
 }
 
 function AdminQueryDetailDialog({ query }) {
@@ -48,7 +50,9 @@ function AdminQueryDetailDialog({ query }) {
             </div>
             <div className="rounded-2xl border border-border bg-slate-50/80 p-4">
               <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Query</p>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{fullQuery.queryText || '-'}</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+                <HashtagText text={fullQuery.queryText} />
+              </p>
             </div>
             <div className="space-y-3">
               <p className="text-sm font-semibold text-dark">Replies ({detail?.replies?.length || 0})</p>
@@ -59,7 +63,9 @@ function AdminQueryDetailDialog({ query }) {
                       <p className="font-semibold text-dark">{reply.repliedBy || 'Responder'}</p>
                       <p className="text-xs text-slate-500">{reply.responderType || 'Staff'} - {formatDate(reply.createdAt, 'DD MMM - hh:mm A')}</p>
                     </div>
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">{reply.replyText}</p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">
+                      <HashtagText text={reply.replyText} />
+                    </p>
                   </div>
                 ))
               ) : (
@@ -127,7 +133,7 @@ function UserActivityDialog({ query }) {
                       <span className="font-medium text-dark">{item.cropName || 'Query'}</span>
                       <StatusBadge value={item.status} />
                     </div>
-                    <p className="mt-1 truncate text-slate-500">{item.queryText}</p>
+                    <p className="mt-1 truncate text-slate-500"><HashtagText text={item.queryText} /></p>
                   </div>
                 ))}
               </div>
@@ -140,6 +146,7 @@ function UserActivityDialog({ query }) {
 }
 
 export default function AdminQueryManagementPage() {
+  const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState('')
   const [cropFilter, setCropFilter] = useState('')
   const params = useMemo(
@@ -176,6 +183,18 @@ export default function AdminQueryManagementPage() {
               description="Admin query row returned by the filtered query API."
               record={row.original}
             />
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={(event) => {
+                event.stopPropagation()
+                navigate(`/admin/queries/${row.original.id}`)
+              }}
+            >
+              <MessageSquare className="h-4 w-4" />
+              Answer
+            </Button>
             <AdminQueryDetailDialog query={row.original} />
             <UserActivityDialog query={row.original} />
             <DeleteActionButton
@@ -190,7 +209,7 @@ export default function AdminQueryManagementPage() {
         ),
       },
     ],
-    [deleteMutation],
+    [deleteMutation, navigate],
   )
 
   const filterSlot = (
@@ -225,6 +244,14 @@ export default function AdminQueryManagementPage() {
         searchPlaceholder="Search farmer, phone, crop, query..."
         emptyMessage={isLoading ? 'Loading queries...' : 'No queries found.'}
         filterSlot={filterSlot}
+        onRowClick={(row) => navigate(`/admin/queries/${row.id}`)}
+        onBulkDelete={async (rows) => {
+          for (const row of rows) {
+            await deleteMutation.mutateAsync(row.id)
+          }
+          toast.success(`${rows.length} quer${rows.length === 1 ? 'y' : 'ies'} deleted successfully.`)
+        }}
+        bulkDeleteConfirmMessage="Delete selected farmer queries?"
       />
     </div>
   )

@@ -1,18 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { demoApi, analyticsApi, auditApi, authApi, categoriesApi, cropDetailsApi, cropDiseaseApi, escalationsApi, guideDetailsApi, guideHeadingsApi, notificationsApi, ordersApi, productsApi, queriesApi, recommendationsApi, settingsApi, supportCasesApi, tasksApi, usersApi } from '@/services/api/resources'
+import { addressesApi, brokerageApi, authApi, categoriesApi, cropDiseaseApi, guideDetailsApi, guideHeadingsApi, guideParentsApi, mandiApi, ordersApi, productCategoriesApi, productsApi, queriesApi, returnRequestsApi, settlementsApi, shopProductsApi, usersApi, vendorApi, vendorCategoriesApi } from '@/services/api/resources'
 import { queryKeys } from '@/services/api/query-keys'
-
-export function useAnalytics(role) {
-  return useQuery({
-    queryKey: queryKeys.analytics(role),
-    queryFn: () => analyticsApi.overview(role),
-  })
-}
 
 export function useUsers(params = {}) {
   return useQuery({
     queryKey: queryKeys.users(params),
     queryFn: () => usersApi.list(params),
+  })
+}
+
+export function useCurrentUserProfile() {
+  return useQuery({
+    queryKey: queryKeys.currentUser,
+    queryFn: usersApi.me,
   })
 }
 
@@ -82,13 +82,6 @@ export function useAdminUserActivity(userId) {
   })
 }
 
-export function useRecommendations() {
-  return useQuery({
-    queryKey: queryKeys.recommendations,
-    queryFn: recommendationsApi.list,
-  })
-}
-
 export function useProducts(params = {}) {
   return useQuery({
     queryKey: queryKeys.products(params),
@@ -101,6 +94,72 @@ export function useProductDetail(id) {
     queryKey: queryKeys.productDetail(id),
     queryFn: () => productsApi.detail(id),
     enabled: Boolean(id),
+  })
+}
+
+export function useShopProducts(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.shopProducts(params),
+    queryFn: () => shopProductsApi.list(params),
+  })
+}
+
+export function useShopProductDetail(id) {
+  return useQuery({
+    queryKey: queryKeys.shopProductDetail(id),
+    queryFn: () => shopProductsApi.detail(id),
+    enabled: Boolean(id),
+  })
+}
+
+export function useProductCategories(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.productCategories(params),
+    queryFn: () => productCategoriesApi.list(params),
+  })
+}
+
+export function useProductSubcategories(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.productSubcategories(params),
+    queryFn: () => productCategoriesApi.subcategories(params),
+  })
+}
+
+export function useVendorCategories(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.vendorCategories(params),
+    queryFn: () => vendorCategoriesApi.list(params),
+  })
+}
+
+export function useVendorProfile(options = {}) {
+  return useQuery({
+    queryKey: queryKeys.vendorProfile,
+    queryFn: vendorApi.profile,
+    enabled: options.enabled ?? true,
+  })
+}
+
+export function useVendors() {
+  return useQuery({
+    queryKey: queryKeys.vendors,
+    queryFn: vendorApi.all,
+  })
+}
+
+export function useServiceProviders() {
+  return useQuery({
+    queryKey: queryKeys.serviceProviders,
+    queryFn: vendorApi.serviceProviders,
+  })
+}
+
+export function useVendorsByCategory(categoryId, params = {}) {
+  return useQuery({
+    queryKey: queryKeys.vendorsByCategory(categoryId, params),
+    queryFn: () => vendorApi.byCategory(categoryId, params),
+    enabled: Boolean(categoryId),
   })
 }
 
@@ -119,13 +178,6 @@ export function useCategoryDetail(id) {
   })
 }
 
-export function useCropDetails(params = {}) {
-  return useQuery({
-    queryKey: queryKeys.cropDetails(params),
-    queryFn: () => cropDetailsApi.list(params),
-  })
-}
-
 export function useCropDiseases(params = {}) {
   return useQuery({
     queryKey: queryKeys.cropDiseases(params),
@@ -141,10 +193,10 @@ export function useCropDiseaseDetail(id) {
   })
 }
 
-export function useGuideHeadings() {
+export function useGuideHeadings(params = {}) {
   return useQuery({
-    queryKey: queryKeys.guideHeadings,
-    queryFn: guideHeadingsApi.list,
+    queryKey: queryKeys.guideHeadings(params),
+    queryFn: () => guideHeadingsApi.list(params),
   })
 }
 
@@ -156,10 +208,10 @@ export function useGuideHeadingDetail(id) {
   })
 }
 
-export function useGuideDetails() {
+export function useGuideDetails(params = {}) {
   return useQuery({
-    queryKey: queryKeys.guideDetails,
-    queryFn: guideDetailsApi.list,
+    queryKey: queryKeys.guideDetails(params),
+    queryFn: () => guideDetailsApi.list(params),
   })
 }
 
@@ -178,45 +230,66 @@ export function useOrders(params = {}) {
   })
 }
 
-export function useEscalations(params = {}) {
+export function useMyOrders() {
   return useQuery({
-    queryKey: queryKeys.escalations(params),
-    queryFn: () => escalationsApi.list(params),
+    queryKey: queryKeys.myOrders,
+    queryFn: ordersApi.myOrders,
   })
 }
 
-export function useNotifications(params = {}) {
+export function useReturnRequests(params = {}) {
   return useQuery({
-    queryKey: queryKeys.notifications(params),
-    queryFn: () => notificationsApi.list(params),
+    queryKey: queryKeys.returnRequests(params),
+    queryFn: () => returnRequestsApi.list(params),
   })
 }
 
-export function useAuditLogs() {
+export function useAddresses() {
   return useQuery({
-    queryKey: queryKeys.auditLogs,
-    queryFn: auditApi.list,
+    queryKey: queryKeys.addresses,
+    queryFn: addressesApi.list,
   })
 }
 
-export function useTasks(params = {}) {
+export function useBrokerageLeads() {
   return useQuery({
-    queryKey: queryKeys.tasks(params),
-    queryFn: () => tasksApi.list(params),
+    queryKey: queryKeys.brokerageLeads,
+    queryFn: brokerageApi.leads,
   })
 }
 
-export function useSupportCases() {
+export function useBrokerageDeals() {
   return useQuery({
-    queryKey: queryKeys.supportCases,
-    queryFn: supportCasesApi.list,
+    queryKey: queryKeys.brokerageDeals,
+    queryFn: brokerageApi.deals,
   })
 }
 
-export function useSettings() {
+export function useSalesReport(params = {}) {
   return useQuery({
-    queryKey: queryKeys.settings,
-    queryFn: settingsApi.get,
+    queryKey: queryKeys.salesReport(params),
+    queryFn: () => ordersApi.salesReport(params),
+  })
+}
+
+export function useMandiRates(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.mandiRates(params),
+    queryFn: () => mandiApi.list(params),
+  })
+}
+
+export function useSettlements(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.settlements(params),
+    queryFn: () => settlementsApi.list(params),
+  })
+}
+
+export function useGuideParents(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.guideParents(params),
+    queryFn: () => guideParentsApi.list(params),
   })
 }
 
@@ -254,6 +327,13 @@ export function useRegisterMutation() {
   })
 }
 
+export function useAdminUserCreateMutation() {
+  return useInvalidatingMutation(
+    authApi.register,
+    [['users']],
+  )
+}
+
 export function useVerifyOtpMutation() {
   return useMutation({
     mutationFn: authApi.verifyOtp,
@@ -279,101 +359,220 @@ export function useResetPasswordMutation() {
   })
 }
 
-export function useUserSaveMutation() {
-  return useInvalidatingMutation(
-    ({ id, payload }) => (id ? usersApi.update(id, payload) : usersApi.create(payload)),
-    [['users'], ['audit-logs']],
-  )
-}
-
-export function useUserDeleteMutation() {
-  return useInvalidatingMutation(
-    (id) => usersApi.remove(id),
-    [['users'], ['audit-logs'], ['analytics']],
-  )
-}
-
 export function useUserRoleMutation() {
   return useInvalidatingMutation(
     ({ id, role }) => usersApi.updateRole(id, role),
-    [['users'], ['audit-logs'], ['analytics']],
+    [['users']],
   )
 }
 
 export function useUserStatusToggleMutation() {
   return useInvalidatingMutation(
     (id) => usersApi.toggleStatus(id),
-    [['users'], ['audit-logs'], ['analytics']],
-  )
-}
-
-export function useRecommendationSaveMutation() {
-  return useInvalidatingMutation(
-    (payload) => recommendationsApi.create(payload),
-    [['recommendations'], ['queries'], ['audit-logs'], ['analytics']],
+    [['users']],
   )
 }
 
 export function useProductSaveMutation() {
   return useInvalidatingMutation(
     ({ id, payload }) => (id ? productsApi.update(id, payload) : productsApi.create(payload)),
-    [['products'], ['audit-logs'], ['analytics']],
+    [['products']],
   )
 }
 
 export function useProductDeleteMutation() {
   return useInvalidatingMutation(
     (id) => productsApi.remove(id),
-    [['products'], ['audit-logs'], ['analytics']],
+    [['products']],
+  )
+}
+
+export function useCropImagesMutation() {
+  return useInvalidatingMutation(
+    ({ id, payload }) => productsApi.updateImages(id, payload),
+    [['products']],
   )
 }
 
 export function useCategorySaveMutation() {
   return useInvalidatingMutation(
     ({ id, payload }) => (id ? categoriesApi.update(id, payload) : categoriesApi.create(payload)),
-    [['categories'], ['audit-logs']],
+    [['categories']],
   )
 }
 
 export function useCategoryDeleteMutation() {
   return useInvalidatingMutation(
     (id) => categoriesApi.remove(id),
-    [['categories'], ['audit-logs']],
+    [['categories']],
   )
 }
 
-export function useCropDetailSaveMutation() {
+export function useShopProductSaveMutation() {
   return useInvalidatingMutation(
-    ({ id, payload }) => (id ? cropDetailsApi.update(id, payload) : cropDetailsApi.create(payload)),
-    [['crop-details'], ['products'], ['analytics']],
+    ({ id, payload }) => (id ? shopProductsApi.update(id, payload) : shopProductsApi.create(payload)),
+    [['shop-products'], ['orders']],
   )
 }
 
-export function useCropDetailStatusMutation() {
+export function useShopProductDeleteMutation() {
   return useInvalidatingMutation(
-    (id) => cropDetailsApi.toggleStatus(id),
-    [['crop-details'], ['analytics']],
+    (id) => shopProductsApi.remove(id),
+    [['shop-products'], ['orders'], ['analytics']],
   )
 }
 
-export function useCropDetailImagesMutation() {
+export function useProductCategorySaveMutation() {
   return useInvalidatingMutation(
-    ({ id, payload }) => cropDetailsApi.updateImages(id, payload),
-    [['crop-details']],
+    ({ id, payload }) => (id ? productCategoriesApi.update(id, payload) : productCategoriesApi.create(payload)),
+    [['product-categories']],
+  )
+}
+
+export function useProductSubcategorySaveMutation() {
+  return useInvalidatingMutation(
+    ({ id, payload }) => (id ? productCategoriesApi.updateSubcategory(id, payload) : productCategoriesApi.createSubcategory(payload)),
+    [['product-categories']],
+  )
+}
+
+export function useVendorCategorySaveMutation() {
+  return useInvalidatingMutation(
+    ({ id, payload }) => (id ? vendorCategoriesApi.update(id, payload) : vendorCategoriesApi.create(payload)),
+    [['vendor-categories']],
+  )
+}
+
+export function useProductCategoryDeleteMutation() {
+  return useInvalidatingMutation(
+    productCategoriesApi.toggleDelete,
+    [['product-categories']],
+  )
+}
+
+export function useProductSubcategoryDeleteMutation() {
+  return useInvalidatingMutation(
+    productCategoriesApi.toggleDeleteSubcategory,
+    [['product-categories']],
+  )
+}
+
+export function useVendorCategoryDeleteMutation() {
+  return useInvalidatingMutation(
+    vendorCategoriesApi.toggleDelete,
+    [['vendor-categories']],
+  )
+}
+
+export function useVendorRegistrationMutation() {
+  return useInvalidatingMutation(
+    vendorApi.register,
+    [['users'], ['vendor']],
+  )
+}
+
+export function useVendorProfileSaveMutation() {
+  return useInvalidatingMutation(
+    ({ id, payload }) => vendorApi.updateProfile(id, payload),
+    [['users'], ['vendor']],
+  )
+}
+
+export function useVendorStatusMutation() {
+  return useInvalidatingMutation(
+    ({ id, status }) => vendorApi.updateStatus(id, status),
+    [['users'], ['vendor']],
+  )
+}
+
+export function useAddressSaveMutation() {
+  return useInvalidatingMutation(
+    ({ id, payload }) => (id ? addressesApi.update(id, payload) : addressesApi.create(payload)),
+    [['addresses']],
+  )
+}
+
+export function useAddressDeleteMutation() {
+  return useInvalidatingMutation(
+    addressesApi.remove,
+    [['addresses']],
+  )
+}
+
+export function useCheckoutMutation() {
+  return useInvalidatingMutation(
+    ordersApi.checkout,
+    [['orders'], ['shop-products']],
+  )
+}
+
+export function usePaymentStatusMutation() {
+  return useInvalidatingMutation(
+    ({ id, payload }) => ordersApi.updatePaymentStatus(id, payload),
+    [['orders']],
+  )
+}
+
+export function useReturnRequestCreateMutation() {
+  return useInvalidatingMutation(
+    returnRequestsApi.request,
+    [['orders'], ['orders', 'returns']],
+  )
+}
+
+export function useReturnHandleMutation() {
+  return useInvalidatingMutation(
+    ({ id, status }) => returnRequestsApi.handle(id, status),
+    [['orders'], ['orders', 'returns'], ['shop-products']],
+  )
+}
+
+export function useBrokerageLeadSaveMutation() {
+  return useInvalidatingMutation(
+    brokerageApi.createLead,
+    [['brokerage', 'leads']],
+  )
+}
+
+export function useBrokerageDealSaveMutation() {
+  return useInvalidatingMutation(
+    brokerageApi.createDeal,
+    [['brokerage', 'leads'], ['brokerage', 'deals']],
+  )
+}
+
+export function useMandiRateSaveMutation() {
+  return useInvalidatingMutation(
+    ({ id, payload }) => (id ? mandiApi.update(id, payload) : mandiApi.create(payload)),
+    [['mandi']],
+  )
+}
+
+export function useMandiRateDeleteMutation() {
+  return useInvalidatingMutation(
+    mandiApi.remove,
+    [['mandi']],
+  )
+}
+
+export function useSettlementSaveMutation() {
+  return useInvalidatingMutation(
+    settlementsApi.create,
+    [['settlements']],
   )
 }
 
 export function useCropDiseaseSaveMutation() {
   return useInvalidatingMutation(
     ({ id, payload }) => (id ? cropDiseaseApi.update(id, payload) : cropDiseaseApi.create(payload)),
-    [['crop-diseases'], ['audit-logs'], ['analytics']],
+    [['crop-diseases']],
   )
 }
 
 export function useCropDiseaseDeleteMutation() {
   return useInvalidatingMutation(
     (id) => cropDiseaseApi.remove(id),
-    [['crop-diseases'], ['audit-logs'], ['analytics']],
+    [['crop-diseases']],
   )
 }
 
@@ -426,114 +625,51 @@ export function useGuideDetailDeleteMutation() {
   )
 }
 
+export function useGuideParentSaveMutation() {
+  return useInvalidatingMutation(
+    ({ id, payload }) => (id ? guideParentsApi.update(id, payload) : guideParentsApi.create(payload)),
+    [['guide-parents'], ['guide-headings'], ['guide-details']],
+  )
+}
+
+export function useGuideParentDeleteMutation() {
+  return useInvalidatingMutation(
+    (id) => guideParentsApi.remove(id),
+    [['guide-parents'], ['guide-headings'], ['guide-details']],
+  )
+}
+
 export function useOrderUpdateMutation() {
   return useInvalidatingMutation(
     ({ id, payload }) => ordersApi.update(id, payload),
-    [['orders'], ['audit-logs'], ['analytics']],
-  )
-}
-
-export function useOrderDeleteMutation() {
-  return useInvalidatingMutation(
-    (id) => ordersApi.remove(id),
-    [['orders'], ['audit-logs'], ['analytics']],
-  )
-}
-
-export function useEscalationUpdateMutation() {
-  return useInvalidatingMutation(
-    ({ id, payload }) => escalationsApi.update(id, payload),
-    [['escalations'], ['audit-logs'], ['analytics']],
-  )
-}
-
-export function useEscalationDeleteMutation() {
-  return useInvalidatingMutation(
-    (id) => escalationsApi.remove(id),
-    [['escalations'], ['audit-logs'], ['analytics']],
+    [['orders']],
   )
 }
 
 export function useQueryUpdateMutation() {
   return useInvalidatingMutation(
     ({ id, payload }) => queriesApi.update(id, payload),
-    [['queries'], ['audit-logs']],
+    [['queries']],
   )
 }
 
 export function useQueryCreateMutation() {
   return useInvalidatingMutation(
     (payload) => queriesApi.create(payload),
-    [['queries'], ['audit-logs'], ['analytics']],
+    [['queries']],
   )
 }
 
 export function useQueryReplyMutation() {
   return useInvalidatingMutation(
     ({ id, payload }) => queriesApi.reply(id, payload),
-    [['queries'], ['recommendations'], ['escalations'], ['audit-logs'], ['analytics']],
+    [['queries']],
   )
 }
 
 export function useQueryDeleteMutation() {
   return useInvalidatingMutation(
     (id) => queriesApi.remove(id),
-    [['queries'], ['recommendations'], ['escalations'], ['audit-logs'], ['analytics']],
-  )
-}
-
-export function useTaskUpdateMutation() {
-  return useInvalidatingMutation(
-    ({ id, payload }) => tasksApi.update(id, payload),
-    [['tasks']],
-  )
-}
-
-export function useTaskDeleteMutation() {
-  return useInvalidatingMutation(
-    (id) => tasksApi.remove(id),
-    [['tasks']],
-  )
-}
-
-export function useSupportCaseUpdateMutation() {
-  return useInvalidatingMutation(
-    ({ id, payload }) => supportCasesApi.update(id, payload),
-    [['support-cases']],
-  )
-}
-
-export function useSupportCaseDeleteMutation() {
-  return useInvalidatingMutation(
-    (id) => supportCasesApi.remove(id),
-    [['support-cases']],
-  )
-}
-
-export function useNotificationReadMutation() {
-  return useInvalidatingMutation(
-    (id) => notificationsApi.markRead(id),
-    [['notifications']],
-  )
-}
-
-export function useAuditLogDeleteMutation() {
-  return useInvalidatingMutation(
-    (id) => auditApi.remove(id),
-    [['audit-logs']],
-  )
-}
-
-export function useSettingsSaveMutation() {
-  return useInvalidatingMutation(
-    (payload) => settingsApi.update(payload),
-    [['settings'], ['audit-logs']],
-  )
-}
-
-export function useDemoResetMutation() {
-  return useInvalidatingMutation(
-    demoApi.reset,
-    [['users'], ['queries'], ['recommendations'], ['products'], ['crop-diseases'], ['orders'], ['escalations'], ['notifications'], ['audit-logs'], ['tasks'], ['support-cases'], ['analytics'], ['settings']],
+    [['queries']],
   )
 }

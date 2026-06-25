@@ -14,40 +14,59 @@ import { ChartCard } from '@/components/charts/chart-card'
 import { StatCard } from '@/components/charts/stat-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ActivityFeed } from '@/features/shared/components/activity-feed'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { WorkflowTimeline } from '@/features/shared/components/workflow-timeline'
 import { formatCurrency } from '@/lib/format'
-import { useAnalytics, useAuditLogs, useProducts } from '@/services/api/hooks'
+import { useOrders, useProducts, useQueries, useUsers } from '@/services/api/hooks'
 
 const pieColors = ['#166534', '#0f766e', '#f59e0b', '#dc2626']
 
 export default function AdminDashboardPage() {
-  const { data: analytics } = useAnalytics('admin')
-  const { data: auditLogs = [] } = useAuditLogs()
-  const { data: products = [] } = useProducts()
-  const lowStock = products.filter((product) => product.stock <= 20)
+  const { data: users = [] } = useUsers({ page: 1, limit: 100 })
+  const { data: products = [] } = useProducts({ page: 1, limit: 100 })
+  const { data: queries = [] } = useQueries({ page: 1, limit: 100 })
+  const { data: orders = [] } = useOrders({ page: 1, limit: 100 })
+
+  const lowStock = products.filter((product) => Number(product.stock || 0) <= 20)
+  const revenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0)
+  const revenueTrend = orders.map((order, index) => ({
+    label: `Order ${index + 1}`,
+    value: Number(order.total || 0),
+  }))
+  const queryMix = ['pending', 'confirmed', 'closed', 'answered'].map((status) => ({
+    name: status,
+    value: queries.filter((query) => query.status === status).length,
+  }))
+
+  const widgets = [
+    { label: 'Users', value: users.length, delta: 'From /users' },
+    { label: 'Crops', value: products.length, delta: 'From /crops' },
+    { label: 'Queries', value: queries.length, delta: 'From /queries/admin/all' },
+    { label: 'Orders', value: orders.length, delta: 'From /orders/history' },
+    { label: 'Revenue', value: formatCurrency(revenue), delta: 'Order total' },
+    { label: 'Low stock', value: lowStock.length, delta: 'Crop catalog' },
+  ]
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Admin command center"
-        title="Central visibility across advisory and marketplace operations."
-        description="Monitor experts, employees, vendors, orders, and escalations from one agriculture-focused SaaS workspace."
+        title="Documented API overview"
+        description="Dashboard data is derived only from endpoints listed in the API document."
         actions={
           <>
             <Button asChild variant="secondary">
-              <Link to="/admin/vendors">Review vendors</Link>
+              <Link to="/admin/vendors">Vendors</Link>
             </Button>
             <Button asChild>
-              <Link to="/admin/escalations">Open escalations</Link>
+              <Link to="/admin/queries">Queries</Link>
             </Button>
           </>
         }
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {analytics?.widgets?.map((item, index) => (
+        {widgets.map((item, index) => (
           <StatCard
             key={item.label}
             label={item.label}
@@ -60,20 +79,20 @@ export default function AdminDashboardPage() {
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
         <ChartCard
-          title="Revenue trajectory"
-          description="Mock monthly revenue trend across marketplace operations."
-          action={<div className="text-sm font-medium text-primary">{formatCurrency(analytics?.revenue)}</div>}
+          title="Order value trend"
+          description="Recent order totals from the documented order history endpoint."
+          action={<div className="text-sm font-medium text-primary">{formatCurrency(revenue)}</div>}
         >
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={analytics?.revenueTrend || []}>
+              <AreaChart data={revenueTrend}>
                 <defs>
                   <linearGradient id="adminRevenue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#166534" stopOpacity={0.34} />
                     <stop offset="100%" stopColor="#166534" stopOpacity={0.04} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="month" axisLine={false} tickLine={false} />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} />
                 <YAxis axisLine={false} tickLine={false} />
                 <Tooltip />
                 <Area type="monotone" dataKey="value" stroke="#166534" fill="url(#adminRevenue)" strokeWidth={3} />
@@ -82,19 +101,12 @@ export default function AdminDashboardPage() {
           </div>
         </ChartCard>
 
-        <ChartCard title="Query health mix" description="Distribution of active advisory workflow states.">
+        <ChartCard title="Query status mix" description="Status distribution from documented query APIs.">
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie
-                  data={analytics?.queryMix || []}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={72}
-                  outerRadius={108}
-                  paddingAngle={4}
-                >
-                  {(analytics?.queryMix || []).map((entry, index) => (
+                <Pie data={queryMix} dataKey="value" nameKey="name" innerRadius={72} outerRadius={108} paddingAngle={4}>
+                  {queryMix.map((entry, index) => (
                     <Cell key={entry.name} fill={pieColors[index % pieColors.length]} />
                   ))}
                 </Pie>
@@ -102,79 +114,32 @@ export default function AdminDashboardPage() {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {(analytics?.queryMix || []).map((item, index) => (
-              <div key={item.name} className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
-                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: pieColors[index % pieColors.length] }} />
-                <div>
-                  <p className="text-sm font-semibold text-dark">{item.name}</p>
-                  <p className="text-xs text-slate-500">{item.value} workflows</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </ChartCard>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <ActivityFeed
-          items={auditLogs.slice(0, 4)}
-          title="Audit highlights"
-          description="Recent role activity and workflow changes across the ecosystem."
-        />
-
-        <WorkflowTimeline
-          title="Query escalation playbook"
-          description="Canonical SLA intervention path used by admins and employees."
-          activeStep={3}
-          steps={[
-            'Assign Query',
-            'Start Timer',
-            'Delay Beyond 2 Hours',
-            'Notify Admin',
-            'Reassign Expert',
-            'Employee Follow-up',
-          ]}
-        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Low stock alerts</CardTitle>
-            <CardDescription>Inventory that may impact recommendation-linked demand.</CardDescription>
+            <CardTitle>Low stock crops</CardTitle>
+            <CardDescription>Catalog rows with low stock values.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {lowStock.map((product) => (
-              <div
-                key={product.id}
-                className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/80 p-4"
-              >
+              <div key={product.id} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
                 <div>
                   <p className="font-semibold text-dark">{product.name}</p>
-                  <p className="text-sm text-slate-500">{product.sku}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-semibold text-danger">{product.stock}</p>
-                  <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Units left</p>
-                </div>
+                <p className="text-lg font-semibold text-danger">{product.stock}</p>
               </div>
             ))}
           </CardContent>
         </Card>
 
         <WorkflowTimeline
-          title="Marketplace order lifecycle"
-          description="Operational states from listing publication to delivery confirmation."
-          activeStep={3}
-          steps={[
-            'Vendor Adds Product',
-            'Product Published',
-            'Order Created',
-            'Processing',
-            'Dispatched',
-            'Delivered',
-          ]}
+          title="Documented query flow"
+          description="Query lifecycle represented by documented `/queries` endpoints."
+          activeStep={2}
+          steps={['Create Query', 'Staff Pending', 'Submit Reply', 'Public Feed']}
         />
       </div>
     </div>

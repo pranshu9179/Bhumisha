@@ -1,28 +1,45 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { DataTable } from '@/components/data-table/data-table'
 import { StatusBadge } from '@/components/feedback/status-badge'
 import { Button } from '@/components/ui/button'
-import { DeleteActionButton } from '@/features/shared/components/delete-action-button'
+import { Input } from '@/components/ui/input'
+import { NativeSelect } from '@/components/ui/native-select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { RecordDetailsDialog } from '@/features/shared/components/record-details-dialog'
 import { formatCurrency, formatDate } from '@/lib/format'
-import {
-  useAuditLogDeleteMutation,
-  useAuditLogs,
-  useEscalationDeleteMutation,
-  useEscalationUpdateMutation,
-  useEscalations,
-  useOrderDeleteMutation,
-  useOrders,
-  useQueries,
-  useUsers,
-} from '@/services/api/hooks'
+import { useOrderUpdateMutation, useOrders, usePaymentStatusMutation, useReturnHandleMutation, useReturnRequests, useSalesReport, useUsers } from '@/services/api/hooks'
+
+const ORDER_STATUS_OPTIONS = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled']
+const PAYMENT_STATUS_OPTIONS = ['Pending', 'Paid', 'Failed']
+
+function selectedStatus(options, value) {
+  const normalized = String(value || '').toLowerCase()
+  return options.find((option) => option.toLowerCase() === normalized) || options[0]
+}
 
 export function OrdersPage() {
   const { data: orders = [] } = useOrders()
+  const { data: returnRequests = [] } = useReturnRequests()
   const { data: vendors = [] } = useUsers({ role: 'vendor' })
-  const deleteMutation = useOrderDeleteMutation()
+  const [salesFilters, setSalesFilters] = useState({
+    vendorId: '',
+    month: '',
+    year: String(new Date().getFullYear()),
+  })
+  const salesParams = useMemo(
+    () => ({
+      vendorId: salesFilters.vendorId || undefined,
+      month: salesFilters.month || undefined,
+      year: salesFilters.year || undefined,
+    }),
+    [salesFilters],
+  )
+  const { data: salesReport = {} } = useSalesReport(salesParams)
+  const statusMutation = useOrderUpdateMutation()
+  const paymentMutation = usePaymentStatusMutation()
+  const returnMutation = useReturnHandleMutation()
   const vendorMap = useMemo(() => Object.fromEntries(vendors.map((item) => [item.id, item.name])), [vendors])
 
   const columns = useMemo(
@@ -30,6 +47,8 @@ export function OrdersPage() {
       { header: 'Order ID', accessorKey: 'id' },
       { header: 'Vendor', accessorKey: 'vendorId', cell: ({ row }) => vendorMap[row.original.vendorId] || '-' },
       { header: 'Customer', accessorKey: 'customerName' },
+      { header: 'Product', accessorKey: 'productName', cell: ({ row }) => row.original.productName || row.original.product_name || '-' },
+      { header: 'Qty', accessorKey: 'quantity' },
       { header: 'Total', accessorKey: 'total', cell: ({ row }) => formatCurrency(row.original.total) },
       { header: 'Payment', accessorKey: 'paymentStatus', cell: ({ row }) => <StatusBadge value={row.original.paymentStatus} /> },
       { header: 'Fulfillment', accessorKey: 'fulfillmentStatus', cell: ({ row }) => <StatusBadge value={row.original.fulfillmentStatus} /> },
@@ -44,155 +63,57 @@ export function OrdersPage() {
               title={`${row.original.id} details`}
               description="Order metadata, payment state, and fulfillment context."
               record={row.original}
-              fields={[
-                { label: 'Order ID', value: row.original.id },
-                { label: 'Vendor', value: vendorMap[row.original.vendorId] || row.original.vendorId },
-                { label: 'Customer', value: row.original.customerName },
-                { label: 'Total', value: formatCurrency(row.original.total) },
-                { label: 'Payment', value: row.original.paymentStatus },
-                { label: 'Fulfillment', value: row.original.fulfillmentStatus },
-                { label: 'Created', value: row.original.createdAt },
-                { label: 'Dispatch', value: row.original.dispatchAt },
-              ]}
             />
-            <DeleteActionButton
-              confirmMessage={`Delete order ${row.original.id} from the demo marketplace flow?`}
-              onDelete={() =>
-                deleteMutation
-                  .mutateAsync(row.original.id)
-                  .then(() => toast.success('Order deleted successfully.'))
+            <NativeSelect
+              className="h-9 w-32"
+              value={selectedStatus(PAYMENT_STATUS_OPTIONS, row.original.payment_status || row.original.paymentStatus)}
+              disabled={paymentMutation.isPending}
+              onClick={(event) => event.stopPropagation()}
+              onChange={(event) =>
+                paymentMutation
+                  .mutateAsync({ id: row.original.id, payload: { paymentStatus: event.target.value } })
+                  .then(() => toast.success(`Payment marked ${event.target.value}.`))
               }
-            />
+            >
+              {PAYMENT_STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </NativeSelect>
+            <NativeSelect
+              className="h-9 w-36"
+              value={selectedStatus(ORDER_STATUS_OPTIONS, row.original.order_status || row.original.orderStatus || row.original.fulfillmentStatus)}
+              disabled={statusMutation.isPending}
+              onClick={(event) => event.stopPropagation()}
+              onChange={(event) =>
+                statusMutation
+                  .mutateAsync({ id: row.original.id, payload: { orderStatus: event.target.value } })
+                  .then(() => toast.success(`Order moved to ${event.target.value}.`))
+              }
+            >
+              {ORDER_STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </NativeSelect>
           </div>
         ),
       },
     ],
-    [deleteMutation, vendorMap],
+    [paymentMutation, statusMutation, vendorMap],
   )
 
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Commerce operations"
-        title="Orders oversight"
-        description="Track all marketplace orders, payment progress, and fulfillment stages across vendors."
-        compact
-      />
-      <DataTable columns={columns} data={orders} searchPlaceholder="Search orders, customers, vendors..." />
-    </div>
-  )
-}
-
-export function EscalationsPage() {
-  const { data: escalations = [] } = useEscalations()
-  const { data: queries = [] } = useQueries()
-  const { data: employees = [] } = useUsers({ role: 'employee' })
-  const mutation = useEscalationUpdateMutation()
-  const deleteMutation = useEscalationDeleteMutation()
-
-  const queryMap = useMemo(() => Object.fromEntries(queries.map((item) => [item.id, item])), [queries])
-  const employeeMap = useMemo(() => Object.fromEntries(employees.map((item) => [item.id, item.name])), [employees])
-
-  const columns = useMemo(
+  const returnColumns = useMemo(
     () => [
-      { header: 'Escalation', accessorKey: 'id' },
-      {
-        header: 'Query',
-        accessorKey: 'queryId',
-        cell: ({ row }) => (
-          <div>
-            <p className="font-semibold text-dark">{queryMap[row.original.queryId]?.farmerName || row.original.queryId}</p>
-            <p className="text-xs text-slate-400">{queryMap[row.original.queryId]?.crop}</p>
-          </div>
-        ),
-      },
+      { header: 'Return ID', accessorKey: 'id' },
+      { header: 'Order', accessorKey: 'orderId' },
+      { header: 'Product', accessorKey: 'productName' },
+      { header: 'Quantity', accessorKey: 'quantity' },
       { header: 'Reason', accessorKey: 'reason' },
-      { header: 'Severity', accessorKey: 'severity', cell: ({ row }) => <StatusBadge value={row.original.severity} /> },
-      { header: 'Owner', accessorKey: 'assignedEmployeeId', cell: ({ row }) => employeeMap[row.original.assignedEmployeeId] || '-' },
       { header: 'Status', accessorKey: 'status', cell: ({ row }) => <StatusBadge value={row.original.status} /> },
-      {
-        header: 'Actions',
-        id: 'actions',
-        cell: ({ row }) => (
-          <div className="flex gap-2">
-            <RecordDetailsDialog
-              title={`${row.original.id} details`}
-              description="Escalation metadata, linked query context, and owner assignment."
-              record={row.original}
-              fields={[
-                { label: 'Escalation', value: row.original.id },
-                { label: 'Farmer', value: queryMap[row.original.queryId]?.farmerName || '-' },
-                { label: 'Crop', value: queryMap[row.original.queryId]?.crop || '-' },
-                { label: 'Reason', value: row.original.reason },
-                { label: 'Severity', value: row.original.severity },
-                { label: 'Owner', value: employeeMap[row.original.assignedEmployeeId] || row.original.assignedEmployeeId },
-                { label: 'Status', value: row.original.status },
-                { label: 'Started', value: row.original.startedAt },
-                { label: 'Due', value: row.original.dueAt },
-              ]}
-            />
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={(event) => {
-                event.stopPropagation()
-                return mutation
-                  .mutateAsync({ id: row.original.id, payload: { status: 'in_follow_up' } })
-                  .then(() => toast.success('Escalation moved to follow-up.'))
-              }}
-            >
-              Follow-up
-            </Button>
-            <Button
-              size="sm"
-              onClick={(event) => {
-                event.stopPropagation()
-                return mutation
-                  .mutateAsync({ id: row.original.id, payload: { status: 'closed' } })
-                  .then(() => toast.success('Escalation closed.'))
-              }}
-            >
-              Resolve
-            </Button>
-            <DeleteActionButton
-              confirmMessage={`Delete escalation ${row.original.id} from the SLA queue?`}
-              onDelete={() =>
-                deleteMutation
-                  .mutateAsync(row.original.id)
-                  .then(() => toast.success('Escalation deleted successfully.'))
-              }
-            />
-          </div>
-        ),
-      },
-    ],
-    [deleteMutation, employeeMap, mutation, queryMap],
-  )
-
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="SLA control"
-        title="Escalation center"
-        description="Investigate breaches, reassign delayed queries, and coordinate employee follow-up."
-        compact
-      />
-      <DataTable columns={columns} data={escalations} searchPlaceholder="Search escalations or farmer names..." />
-    </div>
-  )
-}
-
-export function AuditLogsPage() {
-  const { data: logs = [] } = useAuditLogs()
-  const deleteMutation = useAuditLogDeleteMutation()
-
-  const columns = useMemo(
-    () => [
-      { header: 'Actor', accessorKey: 'actor' },
-      { header: 'Action', accessorKey: 'action' },
-      { header: 'Target', accessorKey: 'target' },
-      { header: 'Channel', accessorKey: 'channel', cell: ({ row }) => <StatusBadge value={row.original.channel} /> },
-      { header: 'Timestamp', accessorKey: 'timestamp', cell: ({ row }) => formatDate(row.original.timestamp, 'DD MMM YYYY · hh:mm A') },
+      { header: 'Created', accessorKey: 'createdAt', cell: ({ row }) => formatDate(row.original.createdAt, 'DD MMM') },
       {
         header: 'Actions',
         id: 'actions',
@@ -200,34 +121,112 @@ export function AuditLogsPage() {
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <RecordDetailsDialog
-              title={`${row.original.id} details`}
-              description="Audit event payload captured by the mock platform."
+              title={`Return ${row.original.id}`}
+              description="Return request metadata, evidence, and handling status."
               record={row.original}
             />
-            <DeleteActionButton
-              confirmMessage="Delete this audit log entry from the demo activity stream?"
-              onDelete={() =>
-                deleteMutation
-                  .mutateAsync(row.original.id)
-                  .then(() => toast.success('Audit log deleted successfully.'))
-              }
-            />
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={(event) => {
+                event.stopPropagation()
+                return returnMutation
+                  .mutateAsync({ id: row.original.id, status: 'Accepted' })
+                  .then(() => toast.success('Return request accepted.'))
+              }}
+            >
+              Accept
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={(event) => {
+                event.stopPropagation()
+                return returnMutation
+                  .mutateAsync({ id: row.original.id, status: 'Rejected' })
+                  .then(() => toast.success('Return request rejected.'))
+              }}
+            >
+              Reject
+            </Button>
           </div>
         ),
       },
     ],
-    [deleteMutation],
+    [returnMutation],
+  )
+  const salesRows = salesReport.rows || salesReport.data || []
+  const salesColumns = useMemo(
+    () => [
+      { header: 'Order', accessorKey: 'orderId' },
+      { header: 'Vendor', accessorKey: 'vendorName', cell: ({ row }) => row.original.vendorName || row.original.vendor_name || '-' },
+      { header: 'Customer', accessorKey: 'customerName', cell: ({ row }) => row.original.customerName || row.original.customer_name || '-' },
+      { header: 'Product', accessorKey: 'productName', cell: ({ row }) => row.original.productName || row.original.product_name || '-' },
+      { header: 'Qty', accessorKey: 'quantity' },
+      { header: 'Item total', accessorKey: 'itemTotal', cell: ({ row }) => formatCurrency(row.original.itemTotal || row.original.item_total) },
+      { header: 'Order status', accessorKey: 'orderStatus', cell: ({ row }) => <StatusBadge value={row.original.orderStatus || row.original.order_status} /> },
+      { header: 'Created', accessorKey: 'createdAt', cell: ({ row }) => formatDate(row.original.createdAt || row.original.created_at, 'DD MMM YYYY') },
+    ],
+    [],
   )
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Governance"
-        title="Audit trail"
-        description="Review platform actions and workflow changes captured by the in-browser mock activity log."
+        eyebrow="Commerce operations"
+        title="Orders oversight"
+        description="Track marketplace orders and fulfillment using documented order endpoints."
         compact
       />
-      <DataTable columns={columns} data={logs} searchPlaceholder="Search audit logs" />
+      <Tabs defaultValue="orders" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="orders">Orders ({orders.length})</TabsTrigger>
+          <TabsTrigger value="returns">Returns ({returnRequests.length})</TabsTrigger>
+          <TabsTrigger value="sales">Sales report</TabsTrigger>
+        </TabsList>
+        <TabsContent value="orders">
+          <DataTable columns={columns} data={orders} searchPlaceholder="Search orders, customers, vendors..." />
+        </TabsContent>
+        <TabsContent value="returns">
+          <DataTable columns={returnColumns} data={returnRequests} searchPlaceholder="Search return requests" />
+        </TabsContent>
+        <TabsContent value="sales" className="space-y-4">
+          <div className="grid gap-3 rounded-xl border border-white/70 bg-white/80 p-4 md:grid-cols-[1fr_160px_160px_auto]">
+            <NativeSelect
+              value={salesFilters.vendorId}
+              onChange={(event) => setSalesFilters((filters) => ({ ...filters, vendorId: event.target.value }))}
+            >
+              <option value="">All vendors</option>
+              {vendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.name || vendor.company_name || vendor.username || vendor.id}
+                </option>
+              ))}
+            </NativeSelect>
+            <NativeSelect
+              value={salesFilters.month}
+              onChange={(event) => setSalesFilters((filters) => ({ ...filters, month: event.target.value }))}
+            >
+              <option value="">All months</option>
+              {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
+            </NativeSelect>
+            <Input
+              type="number"
+              value={salesFilters.year}
+              onChange={(event) => setSalesFilters((filters) => ({ ...filters, year: event.target.value }))}
+              placeholder="Year"
+            />
+            <div className="rounded-lg bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+              Total {formatCurrency(salesReport.totalAmount || salesReport.total_amount || 0)}
+            </div>
+          </div>
+          <DataTable columns={salesColumns} data={salesRows} searchPlaceholder="Search sales report" />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

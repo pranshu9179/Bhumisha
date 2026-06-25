@@ -3,23 +3,40 @@ import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { DataTable } from '@/components/data-table/data-table'
 import { StatusBadge } from '@/components/feedback/status-badge'
+import { PreviewableImage } from '@/components/media/previewable-image'
 import { Button } from '@/components/ui/button'
 import { DeleteActionButton } from '@/features/shared/components/delete-action-button'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { RecordDetailsDialog } from '@/features/shared/components/record-details-dialog'
-import { useCurrentUser } from '@/hooks/use-current-user'
+import { useVendorShopProducts } from '@/features/vendor/hooks/use-vendor-shop-products'
 import { formatCurrency } from '@/lib/format'
-import { useProductDeleteMutation, useProducts } from '@/services/api/hooks'
+import { useShopProductDeleteMutation } from '@/services/api/hooks'
 
 export function VendorProductsPage() {
-  const user = useCurrentUser()
-  const { data: products = [] } = useProducts({ vendorId: user?.id })
-  const deleteMutation = useProductDeleteMutation()
+  const { data: products = [] } = useVendorShopProducts()
+  const deleteMutation = useShopProductDeleteMutation()
 
   const columns = useMemo(
     () => [
-      { header: 'Product', accessorKey: 'name' },
-      { header: 'SKU', accessorKey: 'sku' },
+      {
+        header: 'Product',
+        accessorKey: 'name',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-3">
+            <PreviewableImage
+              src={row.original.image_url || row.original.image}
+              alt={row.original.name}
+              className="h-12 w-12 rounded-lg object-cover"
+              fallbackClassName="h-12 w-12 rounded-lg"
+              previewTitle={`${row.original.name} image`}
+            />
+            <div>
+              <p className="font-semibold text-dark">{row.original.name}</p>
+              <p className="text-xs text-slate-400">{(row.original.tags || []).join(', ')}</p>
+            </div>
+          </div>
+        ),
+      },
       { header: 'Price', accessorKey: 'price', cell: ({ row }) => formatCurrency(row.original.price) },
       { header: 'Stock', accessorKey: 'stock' },
       { header: 'Status', accessorKey: 'status', cell: ({ row }) => <StatusBadge value={row.original.status} /> },
@@ -37,7 +54,7 @@ export function VendorProductsPage() {
               <Link to={`/vendor/products/${row.original.id}/edit`}>Edit</Link>
             </Button>
             <DeleteActionButton
-              confirmMessage={`Delete ${row.original.name} from your product list?`}
+              confirmMessage={`Delete ${row.original.name} from the catalog?`}
               onDelete={() =>
                 deleteMutation
                   .mutateAsync(row.original.id)
@@ -56,7 +73,7 @@ export function VendorProductsPage() {
       <PageHeader
         eyebrow="Catalog"
         title="Vendor products"
-        description="Manage your storefront catalog, track listing health, and open edit flows for SKU-level updates."
+        description="Manage your storefront catalog, track listing health, and open edit flows for product updates."
         compact
         actions={
           <Button asChild>
@@ -64,7 +81,18 @@ export function VendorProductsPage() {
           </Button>
         }
       />
-      <DataTable columns={columns} data={products} searchPlaceholder="Search products, SKUs..." />
+      <DataTable
+        columns={columns}
+        data={products}
+        searchPlaceholder="Search products..."
+        onBulkDelete={async (rows) => {
+          for (const row of rows) {
+            await deleteMutation.mutateAsync(row.id)
+          }
+          toast.success(`${rows.length} product${rows.length === 1 ? '' : 's'} deleted successfully.`)
+        }}
+        bulkDeleteConfirmMessage="Delete selected products from the catalog?"
+      />
     </div>
   )
 }

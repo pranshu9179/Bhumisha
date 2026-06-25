@@ -1,5 +1,6 @@
 import { Edit2, Plus } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { DataTable } from '@/components/data-table/data-table'
 import { StatusBadge } from '@/components/feedback/status-badge'
 import { PreviewableImage } from '@/components/media/previewable-image'
@@ -10,15 +11,16 @@ import { CropDialog } from '@/features/admin/components/catalog/crop-dialog'
 import { CropToggleButton } from '@/features/admin/components/catalog/crop-toggle-button'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { RecordDetailsDialog } from '@/features/shared/components/record-details-dialog'
-import { useCategories, useProducts } from '@/services/api/hooks'
+import { useCategories, useProductDeleteMutation, useProducts } from '@/services/api/hooks'
 
 export function AdminProductsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingCrop, setEditingCrop] = useState(null)
   const [categoryFilter, setCategoryFilter] = useState('')
-  const { data: activeProducts = [], isLoading: activeLoading } = useProducts({ page: 1, limit: 100, status: 'false' })
-  const { data: deletedProducts = [], isLoading: deletedLoading } = useProducts({ page: 1, limit: 100, status: 'true' })
+  const { data: activeProductResponse = [], isLoading: activeLoading } = useProducts({ page: 1, limit: 100, status: 'false' })
+  const { data: deletedProductResponse = [], isLoading: deletedLoading } = useProducts({ page: 1, limit: 100, status: 'true' })
   const { data: categories = [] } = useCategories({ page: 1, limit: 100 })
+  const deleteMutation = useProductDeleteMutation()
   const activeCategories = useMemo(() => categories.filter((category) => category.status !== 'deleted'), [categories])
   const categoryMap = useMemo(() => Object.fromEntries(categories.map((item) => [String(item.id), item.name])), [categories])
 
@@ -30,7 +32,19 @@ export function AdminProductsPage() {
     [categoryFilter],
   )
 
-  const products = useMemo(() => [...activeProducts, ...deletedProducts], [activeProducts, deletedProducts])
+  const activeProducts = useMemo(
+    () => activeProductResponse.filter((product) => product.status !== 'deleted'),
+    [activeProductResponse],
+  )
+  const deletedProducts = useMemo(
+    () => deletedProductResponse.filter((product) => product.status === 'deleted'),
+    [deletedProductResponse],
+  )
+  const products = useMemo(() => {
+    const byId = new Map()
+    activeProducts.concat(deletedProducts).forEach((product) => byId.set(String(product.id), product))
+    return Array.from(byId.values())
+  }, [activeProducts, deletedProducts])
   const visibleActiveProducts = useMemo(() => filterByCategory(activeProducts), [activeProducts, filterByCategory])
   const visibleDeletedProducts = useMemo(() => filterByCategory(deletedProducts), [deletedProducts, filterByCategory])
   const visibleProducts = useMemo(() => filterByCategory(products), [filterByCategory, products])
@@ -76,6 +90,8 @@ export function AdminProductsPage() {
       { header: 'English crop', accessorKey: 'name' },
       { header: 'Hindi crop', accessorKey: 'name_hi', cell: ({ row }) => row.original.name_hi || '-' },
       { header: 'Category', accessorKey: 'categoryId', cell: ({ row }) => categoryMap[String(row.original.categoryId)] || row.original.categoryName || '-' },
+      { header: 'Sequence', accessorKey: 'sequence', cell: ({ row }) => row.original.sequence ?? '-' },
+      { header: 'Images', accessorKey: 'images', cell: ({ row }) => row.original.images?.length || (row.original.image ? 1 : 0) },
       { header: 'Status', accessorKey: 'status', cell: ({ row }) => <StatusBadge value={row.original.status} /> },
       {
         header: 'Actions',
@@ -94,7 +110,8 @@ export function AdminProductsPage() {
                 { label: 'English description', value: row.original.description },
                 { label: 'Hindi description', value: row.original.description_hi },
                 { label: 'Category', value: categoryMap[String(row.original.categoryId)] || row.original.categoryName },
-                { label: 'Image', value: row.original.image },
+                { label: 'Sequence', value: row.original.sequence },
+                { label: 'Images', value: row.original.images?.join(', ') || row.original.image },
                 { label: 'Status', value: row.original.status },
                 { label: 'Created', value: row.original.createdAt },
                 { label: 'Updated', value: row.original.updatedAt },
@@ -149,6 +166,13 @@ export function AdminProductsPage() {
             searchPlaceholder="Search active crops"
             emptyMessage={activeLoading ? 'Loading crops...' : 'No active crops found.'}
             filterSlot={categoryFilterSlot}
+            onBulkDelete={async (rows) => {
+              for (const row of rows) {
+                await deleteMutation.mutateAsync(row.id)
+              }
+              toast.success(`${rows.length} crop${rows.length === 1 ? '' : 's'} deleted successfully.`)
+            }}
+            bulkDeleteConfirmMessage="Delete selected crops?"
           />
         </TabsContent>
         <TabsContent value="deleted">
@@ -167,6 +191,14 @@ export function AdminProductsPage() {
             searchPlaceholder="Search crops"
             emptyMessage={activeLoading || deletedLoading ? 'Loading crops...' : 'No crops found.'}
             filterSlot={categoryFilterSlot}
+            onBulkDelete={async (rows) => {
+              const deletableRows = rows.filter((row) => row.status !== 'deleted')
+              for (const row of deletableRows) {
+                await deleteMutation.mutateAsync(row.id)
+              }
+              toast.success(`${deletableRows.length} crop${deletableRows.length === 1 ? '' : 's'} deleted successfully.`)
+            }}
+            bulkDeleteConfirmMessage="Delete selected active crops? Deleted rows will be skipped."
           />
         </TabsContent>
       </Tabs>

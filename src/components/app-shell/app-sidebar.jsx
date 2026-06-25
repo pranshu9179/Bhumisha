@@ -22,27 +22,27 @@ export function AppSidebar({ role }) {
       />
       <aside
         className={cn(
-          'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-white/50 bg-[linear-gradient(180deg,#10291d_0%,#163625_32%,#0f172a_100%)] px-4 py-5 text-white transition-all duration-300',
+          'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-emerald-950/20 bg-[#14241f] px-4 py-5 text-white shadow-2xl shadow-slate-950/20 transition-all duration-300',
           sidebarOpen ? 'w-80' : 'w-24',
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         )}
       >
         <div className="mb-6 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="rounded-2xl bg-white/10 p-3 text-accent">
+            <div className="rounded-xl bg-amber-400/15 p-3 text-amber-300 ring-1 ring-amber-200/15">
               <Sprout className="h-6 w-6" />
             </div>
             {sidebarOpen ? (
               <div className="min-w-0">
                 <p className="truncate text-lg font-semibold">{APP_NAME}</p>
-                <p className="text-xs uppercase tracking-[0.18em] text-emerald-100/70">Smart agriculture cloud</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-emerald-50/65">Smart agriculture cloud</p>
               </div>
             ) : null}
           </div>
           <button
             type="button"
             onClick={() => dispatch(toggleSidebar())}
-            className="hidden rounded-full border border-white/10 p-2 text-emerald-100/75 transition hover:bg-white/10 md:block"
+            className="hidden rounded-full border border-white/10 p-2 text-emerald-50/75 transition hover:bg-white/10 md:block"
           >
             {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
@@ -52,7 +52,7 @@ export function AppSidebar({ role }) {
           {sections.map((section) => (
             <div key={section.group} className="space-y-2">
               {sidebarOpen ? (
-                <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.26em] text-emerald-100/50">
+                <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.26em] text-emerald-50/45">
                   {section.group}
                 </p>
               ) : null}
@@ -66,8 +66,8 @@ export function AppSidebar({ role }) {
                       onClick={() => dispatch(setMobileSidebarOpen(false))}
                       className={({ isActive }) =>
                         cn(
-                          'group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm text-emerald-100/75 transition hover:bg-white/8 hover:text-white',
-                          isActive ? 'bg-white/10 text-white shadow-lg shadow-slate-950/20' : '',
+                          'group flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-emerald-50/72 transition hover:bg-white/8 hover:text-white',
+                          isActive ? 'bg-emerald-50/12 text-white shadow-lg shadow-slate-950/20 ring-1 ring-white/10' : '',
                           !sidebarOpen ? 'justify-center px-2' : '',
                         )
                       }
@@ -76,7 +76,7 @@ export function AppSidebar({ role }) {
                       {sidebarOpen ? (
                         <div className="min-w-0">
                           <p className="truncate font-semibold">{item.title}</p>
-                          <p className="truncate text-xs text-emerald-100/50 group-hover:text-emerald-100/70">
+                          <p className="truncate text-xs text-emerald-50/45 group-hover:text-emerald-50/70">
                             {item.description}
                           </p>
                         </div>

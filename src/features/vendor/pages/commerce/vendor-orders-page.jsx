@@ -1,23 +1,20 @@
 import { useMemo } from 'react'
-import { toast } from 'sonner'
 import { DataTable } from '@/components/data-table/data-table'
 import { StatusBadge } from '@/components/feedback/status-badge'
-import { DeleteActionButton } from '@/features/shared/components/delete-action-button'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { RecordDetailsDialog } from '@/features/shared/components/record-details-dialog'
-import { useCurrentUser } from '@/hooks/use-current-user'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { useOrderDeleteMutation, useOrders } from '@/services/api/hooks'
+import { useOrders } from '@/services/api/hooks'
 
 export function VendorOrdersPage() {
-  const user = useCurrentUser()
-  const { data: orders = [] } = useOrders({ vendorId: user?.id })
-  const deleteMutation = useOrderDeleteMutation()
+  const { data: orders = [] } = useOrders()
 
   const columns = useMemo(
     () => [
       { header: 'Order', accessorKey: 'id' },
       { header: 'Customer', accessorKey: 'customerName' },
+      { header: 'Product', accessorKey: 'productName', cell: ({ row }) => row.original.productName || row.original.product_name || '-' },
+      { header: 'Qty', accessorKey: 'quantity' },
       { header: 'Total', accessorKey: 'total', cell: ({ row }) => formatCurrency(row.original.total) },
       { header: 'Payment', accessorKey: 'paymentStatus', cell: ({ row }) => <StatusBadge value={row.original.paymentStatus} /> },
       { header: 'Fulfillment', accessorKey: 'fulfillmentStatus', cell: ({ row }) => <StatusBadge value={row.original.fulfillmentStatus} /> },
@@ -33,19 +30,11 @@ export function VendorOrdersPage() {
               description="Vendor-facing order details and fulfillment state."
               record={row.original}
             />
-            <DeleteActionButton
-              confirmMessage={`Delete order ${row.original.id} from your demo order list?`}
-              onDelete={() =>
-                deleteMutation
-                  .mutateAsync(row.original.id)
-                  .then(() => toast.success('Order deleted successfully.'))
-              }
-            />
           </div>
         ),
       },
     ],
-    [deleteMutation],
+    [],
   )
 
   return (

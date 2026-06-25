@@ -8,10 +8,12 @@ export const categorySchema = z.object({
 export const cropSchema = z.object({
   name: z.string().trim().min(2, 'English crop name is required'),
   name_hi: z.string().trim().optional(),
-  description: z.string().trim().min(2, 'English description is required'),
+  description: z.string().trim().optional(),
   description_hi: z.string().trim().optional(),
   categoryId: z.string().min(1, 'Crop category is required'),
+  sequence: z.string().optional(),
   crop_theme_image: z.any().optional(),
+  deleteIndexes: z.array(z.number()).optional(),
 })
 
 export const guideHeadingSchema = z.object({
@@ -41,4 +43,3 @@ export const guideDetailEditSchema = z.object({
   description: z.string().trim().optional(),
   description_hi: z.string().trim().optional(),
 })
-

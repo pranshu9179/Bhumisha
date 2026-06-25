@@ -15,12 +15,24 @@ export function GuideHeadingsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingHeading, setEditingHeading] = useState(null)
   const [deletedHeadings, setDeletedHeadings] = useState(readDeletedGuideHeadings)
-  const { data: activeHeadings = [], isLoading } = useGuideHeadings()
-  const activeHeadingIds = useMemo(() => new Set(activeHeadings.map((heading) => String(heading.id))), [activeHeadings])
-  const visibleDeletedHeadings = useMemo(
-    () => deletedHeadings.filter((heading) => !activeHeadingIds.has(String(heading.id))),
-    [activeHeadingIds, deletedHeadings],
+  const { data: activeHeadingResponse = [], isLoading: activeLoading } = useGuideHeadings({ page: 1, limit: 100, status: 'false' })
+  const { data: deletedHeadingResponse = [], isLoading: deletedLoading } = useGuideHeadings({ page: 1, limit: 100, status: 'true' })
+  const activeHeadings = useMemo(
+    () => activeHeadingResponse.filter((heading) => heading.status !== 'deleted'),
+    [activeHeadingResponse],
   )
+  const activeHeadingIds = useMemo(() => new Set(activeHeadings.map((heading) => String(heading.id))), [activeHeadings])
+  const backendDeletedHeadings = useMemo(
+    () => deletedHeadingResponse.filter((heading) => heading.status === 'deleted'),
+    [deletedHeadingResponse],
+  )
+  const visibleDeletedHeadings = useMemo(() => {
+    const byId = new Map()
+    backendDeletedHeadings.concat(deletedHeadings).forEach((heading) => {
+      if (!activeHeadingIds.has(String(heading.id))) byId.set(String(heading.id), heading)
+    })
+    return Array.from(byId.values())
+  }, [activeHeadingIds, backendDeletedHeadings, deletedHeadings])
 
   const persistDeletedHeadings = useCallback((rows) => {
     setDeletedHeadings(rows)
@@ -140,7 +152,7 @@ export function GuideHeadingsPage() {
             columns={columns}
             data={activeHeadings}
             searchPlaceholder="Search active guide headings"
-            emptyMessage={isLoading ? 'Loading guide headings...' : 'No active guide headings found.'}
+            emptyMessage={activeLoading ? 'Loading guide headings...' : 'No active guide headings found.'}
           />
         </TabsContent>
         <TabsContent value="deleted">
@@ -148,7 +160,7 @@ export function GuideHeadingsPage() {
             columns={columns}
             data={visibleDeletedHeadings}
             searchPlaceholder="Search deleted guide headings"
-            emptyMessage="No locally tracked deleted guide headings found."
+            emptyMessage={deletedLoading ? 'Loading deleted guide headings...' : 'No deleted guide headings found.'}
           />
         </TabsContent>
         <TabsContent value="all">
@@ -156,7 +168,7 @@ export function GuideHeadingsPage() {
             columns={columns}
             data={allHeadings}
             searchPlaceholder="Search guide headings"
-            emptyMessage={isLoading ? 'Loading guide headings...' : 'No guide headings found.'}
+            emptyMessage={activeLoading || deletedLoading ? 'Loading guide headings...' : 'No guide headings found.'}
           />
         </TabsContent>
       </Tabs>
@@ -174,4 +186,3 @@ export function GuideHeadingsPage() {
 }
 
 export default GuideHeadingsPage
-

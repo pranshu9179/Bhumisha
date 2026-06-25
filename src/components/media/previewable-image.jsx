@@ -2,7 +2,43 @@ import { ExternalLink, ImageOff, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { API_BASE_URL } from '@/services/api/client'
 import { cn } from '@/lib/utils'
+
+function assetBaseUrl() {
+  try {
+    return new URL(API_BASE_URL).origin
+  } catch {
+    return API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/$/, '')
+  }
+}
+
+function resolveImageSrc(value) {
+  if (!value) return ''
+  if (Array.isArray(value)) return resolveImageSrc(value[0])
+  if (typeof value === 'object') {
+    return resolveImageSrc(
+      value.secure_url ||
+        value.secureUrl ||
+        value.url ||
+        value.media_url ||
+        value.image_url ||
+        value.file_url ||
+        value.path ||
+        value.file_path ||
+        value.profile_image ||
+        value.avatar,
+    )
+  }
+  if (typeof value !== 'string') return ''
+
+  const trimmed = value.trim().replaceAll('\\', '/')
+  if (!trimmed) return ''
+  if (/^(https?:|blob:|data:)/i.test(trimmed)) return trimmed
+
+  const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
+  return `${assetBaseUrl()}${path}`
+}
 
 export function PreviewableImage({
   src,
@@ -17,9 +53,10 @@ export function PreviewableImage({
   stopPropagation = true,
 }) {
   const [open, setOpen] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const [failedImage, setFailedImage] = useState('')
   const [zoom, setZoom] = useState(1)
-  const imageSrc = typeof src === 'string' ? src.trim() : ''
+  const imageSrc = resolveImageSrc(src)
+  const failed = failedImage === imageSrc
 
   const handleOpenChange = (nextOpen) => {
     setOpen(nextOpen)
@@ -51,7 +88,7 @@ export function PreviewableImage({
           alt={alt}
           className={cn('transition duration-200 group-hover:scale-[1.03]', className)}
           loading={loading}
-          onError={() => setFailed(true)}
+          onError={() => setFailedImage(imageSrc)}
         />
       </button>
       <Dialog open={open} onOpenChange={handleOpenChange}>

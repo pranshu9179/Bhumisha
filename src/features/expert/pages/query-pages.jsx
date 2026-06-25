@@ -15,8 +15,10 @@ import { Input } from '@/components/ui/input'
 import { NativeSelect } from '@/components/ui/native-select'
 import { Textarea } from '@/components/ui/textarea'
 import { PageHeader } from '@/features/shared/components/page-header'
+import { HashtagText } from '@/features/shared/components/hashtag-text'
 import { RecordDetailsDialog } from '@/features/shared/components/record-details-dialog'
 import { WorkflowTimeline } from '@/features/shared/components/workflow-timeline'
+import { useCurrentUser } from '@/hooks/use-current-user'
 import { formatDate } from '@/lib/format'
 import { useProducts, useQueryDetail, useQueryReplyMutation, useStaffMyReplies, useStaffPendingQueries } from '@/services/api/hooks'
 
@@ -125,7 +127,7 @@ export function ExpertQueriesPage() {
       {
         header: 'Problem',
         accessorKey: 'queryText',
-        cell: ({ row }) => <p className="max-w-md truncate">{row.original.queryText}</p>,
+        cell: ({ row }) => <p className="max-w-md truncate"><HashtagText text={row.original.queryText} /></p>,
       },
       { header: 'Media', accessorKey: 'mediaType', cell: ({ row }) => <StatusBadge value={row.original.mediaType} /> },
       { header: 'Replies', accessorKey: 'replyCount' },
@@ -203,12 +205,12 @@ export function ExpertHistoryPage() {
       {
         header: 'Farmer query',
         accessorKey: 'queryText',
-        cell: ({ row }) => <p className="max-w-sm truncate">{row.original.queryText}</p>,
+        cell: ({ row }) => <p className="max-w-sm truncate"><HashtagText text={row.original.queryText} /></p>,
       },
       {
         header: 'Your reply',
         accessorKey: 'replyText',
-        cell: ({ row }) => <p className="max-w-sm truncate">{row.original.replyText}</p>,
+        cell: ({ row }) => <p className="max-w-sm truncate"><HashtagText text={row.original.replyText} /></p>,
       },
       { header: 'Status', accessorKey: 'queryStatus', cell: ({ row }) => <StatusBadge value={row.original.queryStatus} /> },
       { header: 'Replied', accessorKey: 'repliedAt', cell: ({ row }) => formatDate(row.original.repliedAt, 'DD MMM YYYY') },
@@ -255,6 +257,7 @@ export function ExpertHistoryPage() {
 
 export function ExpertQueryDetailPage() {
   const { id } = useParams()
+  const user = useCurrentUser()
   const { data: query, isLoading } = useQueryDetail(id)
   const mutation = useQueryReplyMutation()
   const {
@@ -291,7 +294,7 @@ export function ExpertQueryDetailPage() {
           files,
         },
       })
-      toast.success('Reply submitted. The query will be public once confirmed by the backend.')
+      toast.success('Reply submitted. The query is now handled by the backend workflow.')
       reset()
     } catch (error) {
       toast.error(error.displayMessage || 'Unable to submit reply.')
@@ -309,9 +312,9 @@ export function ExpertQueryDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Case review"
+        eyebrow={`${user?.role || 'staff'} case review`}
         title={`${query.cropName || 'Crop'} - ${query.askedBy || 'Farmer query'}`}
-        description={query.queryText}
+        description={<HashtagText text={query.queryText} />}
         compact
       />
 
@@ -346,7 +349,7 @@ export function ExpertQueryDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle>Reply to query</CardTitle>
-              <CardDescription>Employee, expert, and admin replies can confirm pending queries for the public feed.</CardDescription>
+              <CardDescription>Admin, employee, and expert replies use the same documented staff answer endpoint.</CardDescription>
             </CardHeader>
             <CardContent>
               <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
@@ -393,7 +396,9 @@ export function ExpertQueryDetailPage() {
                       </div>
                       <MessageSquare className="h-4 w-4 shrink-0 text-slate-400" />
                     </div>
-                    <p className="mt-3 whitespace-pre-wrap text-sm text-slate-600">{reply.replyText}</p>
+                    <p className="mt-3 whitespace-pre-wrap text-sm text-slate-600">
+                      <HashtagText text={reply.replyText} />
+                    </p>
                     {reply.media?.length ? (
                       <div className="mt-4">
                         <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">

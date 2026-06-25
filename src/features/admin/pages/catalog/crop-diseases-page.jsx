@@ -195,13 +195,25 @@ export function CropDiseasesPage() {
     () => ({ page: 1, limit: 100, status: 'true', crop_id: cropFilter || undefined }),
     [cropFilter],
   )
-  const { data: activeDiseases = [], isLoading: activeLoading } = useCropDiseases(activeParams)
-  const { data: deletedDiseases = [], isLoading: deletedLoading } = useCropDiseases(deletedParams)
+  const { data: activeDiseaseResponse = [], isLoading: activeLoading } = useCropDiseases(activeParams)
+  const { data: deletedDiseaseResponse = [], isLoading: deletedLoading } = useCropDiseases(deletedParams)
   const { data: crops = [] } = useProducts({ page: 1, limit: 100, status: 'false' })
   const deleteMutation = useCropDiseaseDeleteMutation()
 
   const cropMap = useMemo(() => Object.fromEntries(crops.map((crop) => [String(crop.id), crop.name])), [crops])
-  const allDiseases = useMemo(() => [...activeDiseases, ...deletedDiseases], [activeDiseases, deletedDiseases])
+  const activeDiseases = useMemo(
+    () => activeDiseaseResponse.filter((disease) => disease.status !== 'deleted'),
+    [activeDiseaseResponse],
+  )
+  const deletedDiseases = useMemo(
+    () => deletedDiseaseResponse.filter((disease) => disease.status === 'deleted'),
+    [deletedDiseaseResponse],
+  )
+  const allDiseases = useMemo(() => {
+    const byId = new Map()
+    activeDiseases.concat(deletedDiseases).forEach((disease) => byId.set(String(disease.id), disease))
+    return Array.from(byId.values())
+  }, [activeDiseases, deletedDiseases])
 
   const filterSlot = (
     <NativeSelect value={cropFilter} onChange={(event) => setCropFilter(event.target.value)} className="max-w-xs">
@@ -317,6 +329,13 @@ export function CropDiseasesPage() {
             searchPlaceholder="Search active diseases"
             emptyMessage={activeLoading ? 'Loading diseases...' : 'No active diseases found.'}
             filterSlot={filterSlot}
+            onBulkDelete={async (rows) => {
+              for (const row of rows) {
+                await deleteMutation.mutateAsync(row.id)
+              }
+              toast.success(`${rows.length} disease${rows.length === 1 ? '' : 's'} deleted successfully.`)
+            }}
+            bulkDeleteConfirmMessage="Delete selected crop diseases?"
           />
         </TabsContent>
         <TabsContent value="deleted">
@@ -335,6 +354,14 @@ export function CropDiseasesPage() {
             searchPlaceholder="Search diseases"
             emptyMessage={activeLoading || deletedLoading ? 'Loading diseases...' : 'No diseases found.'}
             filterSlot={filterSlot}
+            onBulkDelete={async (rows) => {
+              const deletableRows = rows.filter((row) => row.status !== 'deleted')
+              for (const row of deletableRows) {
+                await deleteMutation.mutateAsync(row.id)
+              }
+              toast.success(`${deletableRows.length} disease${deletableRows.length === 1 ? '' : 's'} deleted successfully.`)
+            }}
+            bulkDeleteConfirmMessage="Delete selected active crop diseases? Deleted rows will be skipped."
           />
         </TabsContent>
       </Tabs>

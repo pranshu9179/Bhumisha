@@ -5,6 +5,7 @@ export const ROLES = {
   EXPERT: 'expert',
   EMPLOYEE: 'employee',
   VENDOR: 'vendor',
+  USER: 'user',
 }
 
 export const ROLE_LABELS = {
@@ -12,6 +13,7 @@ export const ROLE_LABELS = {
   [ROLES.EXPERT]: 'Expert',
   [ROLES.EMPLOYEE]: 'Employee',
   [ROLES.VENDOR]: 'Vendor',
+  [ROLES.USER]: 'User',
 }
 
 export const STORAGE_KEYS = {
@@ -20,4 +22,4 @@ export const STORAGE_KEYS = {
   PREFERENCES: 'bhumisha-nexus-preferences',
 }
 
-export const DEFAULT_PAGE_SIZE = 8
+export const DEFAULT_PAGE_SIZE = 10

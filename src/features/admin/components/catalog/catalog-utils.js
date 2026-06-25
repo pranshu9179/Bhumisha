@@ -7,10 +7,21 @@ export function getFirstFile(value) {
   return value
 }
 
+export function getFiles(value) {
+  if (!value) return []
+  if (typeof FileList !== 'undefined' && value instanceof FileList) return Array.from(value)
+  if (Array.isArray(value)) return value.filter(Boolean)
+  return [value].filter(Boolean)
+}
+
 export function isValidCropImage(file) {
   if (!file) return true
   const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg']
   return allowedTypes.includes(file.type) && file.size <= 50 * 1024 * 1024
+}
+
+export function areValidCropImages(files = []) {
+  return files.every(isValidCropImage)
 }
 
 export function readDeletedGuideHeadings() {
@@ -38,4 +49,3 @@ export function createEmptyGuideDetailRow() {
     media: undefined,
   }
 }
-

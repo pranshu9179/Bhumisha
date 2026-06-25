@@ -1,6 +1,5 @@
 export { AdminProductsPage } from '@/features/admin/pages/catalog/admin-products-page'
 export { CategoriesPage } from '@/features/admin/pages/catalog/categories-page'
-export { CropDetailsPage } from '@/features/admin/pages/catalog/crop-details-page'
 export { GuideDetailsPage } from '@/features/admin/pages/catalog/guide-details-page'
 export { GuideHeadingsPage } from '@/features/admin/pages/catalog/guide-headings-page'
 export { CropDiseasesPage } from '@/features/admin/pages/catalog/crop-diseases-page'

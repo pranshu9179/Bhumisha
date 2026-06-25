@@ -12,28 +12,39 @@ import { StatCard } from '@/components/charts/stat-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { PageHeader } from '@/features/shared/components/page-header'
+import { useVendorShopProducts } from '@/features/vendor/hooks/use-vendor-shop-products'
 import { formatCurrency } from '@/lib/format'
-import { useCurrentUser } from '@/hooks/use-current-user'
-import { useAnalytics, useOrders, useProducts } from '@/services/api/hooks'
+import { useOrders } from '@/services/api/hooks'
 
 export default function VendorDashboardPage() {
-  const user = useCurrentUser()
-  const { data: analytics } = useAnalytics('vendor')
-  const { data: products = [] } = useProducts({ vendorId: user?.id })
-  const { data: orders = [] } = useOrders({ vendorId: user?.id })
+  const { data: products = [] } = useVendorShopProducts()
+  const { data: orders = [] } = useOrders()
 
-  const lowStock = products.filter((product) => product.stock <= 20)
+  const lowStock = products.filter((product) => Number(product.stock || 0) <= 20)
+  const orderValue = (order) => {
+    if (order.productName || order.product_name) {
+      return Number(order.itemTotal || order.item_total || Number(order.price || 0) * Number(order.quantity || 0) || order.total || 0)
+    }
+    return Number(order.total || 0)
+  }
+  const revenue = orders.reduce((sum, order) => sum + orderValue(order), 0)
   const revenueSeries = orders.map((order, index) => ({
     label: `Order ${index + 1}`,
-    value: order.total,
+    value: orderValue(order),
   }))
+  const widgets = [
+    { label: 'Products', value: products.length, delta: 'From /products/all' },
+    { label: 'Orders', value: orders.length, delta: 'From /orders/history' },
+    { label: 'Revenue', value: formatCurrency(revenue), delta: 'Order total' },
+    { label: 'Low stock', value: lowStock.length, delta: 'Catalog rows' },
+  ]
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Vendor console"
-        title="Marketplace performance with catalog, stock, and dispatch visibility."
-        description="Manage your published products, keep inventory healthy, and move incoming orders through dispatch and delivery."
+        title="Marketplace overview"
+        description="Product and order data from documented commerce APIs."
         actions={
           <>
             <Button asChild variant="secondary">
@@ -46,8 +57,8 @@ export default function VendorDashboardPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {analytics?.widgets?.map((item, index) => (
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {widgets.map((item, index) => (
           <StatCard key={item.label} label={item.label} value={item.value} delta={item.delta} accent={index % 2 === 0 ? 'primary' : 'accent'} />
         ))}
       </div>
@@ -56,7 +67,7 @@ export default function VendorDashboardPage() {
         <ChartCard
           title="Order value trend"
           description="Recent order values for the current vendor account."
-          action={<div className="text-sm font-medium text-primary">{formatCurrency(orders.reduce((sum, order) => sum + order.total, 0))}</div>}
+          action={<div className="text-sm font-medium text-primary">{formatCurrency(revenue)}</div>}
         >
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -79,13 +90,12 @@ export default function VendorDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Low stock watchlist</CardTitle>
-            <CardDescription>SKUs that need replenishment soon.</CardDescription>
+            <CardDescription>Products that need replenishment soon.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {lowStock.map((product) => (
               <div key={product.id} className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
                 <p className="font-semibold text-dark">{product.name}</p>
-                <p className="text-sm text-slate-500">{product.sku}</p>
                 <p className="mt-2 text-2xl font-semibold text-danger">{product.stock}</p>
               </div>
             ))}

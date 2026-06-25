@@ -1,5 +1,6 @@
 import { Edit2, Plus } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { DataTable } from '@/components/data-table/data-table'
 import { StatusBadge } from '@/components/feedback/status-badge'
 import { Button } from '@/components/ui/button'
@@ -9,16 +10,17 @@ import { GuideDetailDialog } from '@/features/admin/components/catalog/guide-det
 import { GuideMediaStrip } from '@/features/admin/components/catalog/guide-media'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { RecordDetailsDialog } from '@/features/shared/components/record-details-dialog'
-import { useGuideDetails, useGuideHeadings, useProducts } from '@/services/api/hooks'
+import { useGuideDetailDeleteMutation, useGuideDetails, useGuideHeadings, useProducts } from '@/services/api/hooks'
 
 export function GuideDetailsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingDetail, setEditingDetail] = useState(null)
   const [cropFilter, setCropFilter] = useState('')
   const [headingFilter, setHeadingFilter] = useState('')
-  const { data: guideDetails = [], isLoading } = useGuideDetails()
+  const { data: guideDetails = [], isLoading } = useGuideDetails({ page: 1, limit: 10 })
   const { data: crops = [] } = useProducts({ page: 1, limit: 100, status: 'false' })
   const { data: headings = [] } = useGuideHeadings()
+  const deleteMutation = useGuideDetailDeleteMutation()
 
   const cropMap = useMemo(() => Object.fromEntries(crops.map((crop) => [String(crop.id), crop.name])), [crops])
   const headingMap = useMemo(() => Object.fromEntries(headings.map((heading) => [String(heading.id), heading.title])), [headings])
@@ -139,6 +141,13 @@ export function GuideDetailsPage() {
         searchPlaceholder="Search guide details, crops, headings..."
         emptyMessage={isLoading ? 'Loading guide details...' : 'No guide details found.'}
         filterSlot={filterSlot}
+        onBulkDelete={async (rows) => {
+          for (const row of rows) {
+            await deleteMutation.mutateAsync(row.id)
+          }
+          toast.success(`${rows.length} guide detail${rows.length === 1 ? '' : 's'} deleted successfully.`)
+        }}
+        bulkDeleteConfirmMessage="Delete selected guide details?"
       />
       <GuideDetailDialog
         open={dialogOpen}
@@ -155,4 +164,3 @@ export function GuideDetailsPage() {
 }
 
 export default GuideDetailsPage
-

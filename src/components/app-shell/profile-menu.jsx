@@ -98,7 +98,7 @@
 
 
 import { useRef, useState } from 'react'
-import { LogOut, RefreshCw, Settings2, Camera } from 'lucide-react'
+import { LogOut, Camera } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -114,7 +114,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { useDemoResetMutation, useLogoutMutation, useProfileImageMutation } from '@/services/api/hooks'
+import { useLogoutMutation, useProfileImageMutation } from '@/services/api/hooks'
 import { logout } from '@/store/auth-slice'
 
 function initials(name) {
@@ -132,7 +132,6 @@ export function ProfileMenu() {
 
   const { user } = useSelector((state) => state.auth)
 
-  const resetMutation = useDemoResetMutation()
   const logoutMutation = useLogoutMutation()
   const profileImageMutation = useProfileImageMutation()
 
@@ -222,13 +221,6 @@ export function ProfileMenu() {
     }
   }
 
-  const preferencesPath = user?.role === 'admin' ? '/admin/settings' : `/${user?.role}`
-
-  const handleReset = async () => {
-    await resetMutation.mutateAsync()
-    toast.success('Demo data has been restored.')
-  }
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -308,18 +300,6 @@ export function ProfileMenu() {
             {hasImage ? 'Update image' : 'Add image'}
           </button>
         </div>
-
-        <DropdownMenuSeparator />
-
-        <DropdownMenuItem onClick={() => navigate(preferencesPath)}>
-          <Settings2 className="h-4 w-4" />
-          {user?.role === 'admin' ? 'Preferences' : 'My dashboard'}
-        </DropdownMenuItem>
-
-        <DropdownMenuItem onClick={handleReset}>
-          <RefreshCw className="h-4 w-4" />
-          Reset demo data
-        </DropdownMenuItem>
 
         <DropdownMenuSeparator />
 

@@ -6,8 +6,9 @@ describe('AppSidebar', () => {
   it('shows role-specific admin navigation', () => {
     renderWithProviders(<AppSidebar role="admin" />)
 
-    expect(screen.getByText('Analytics')).toBeInTheDocument()
+    expect(screen.getByText('Marketplace Taxonomy')).toBeInTheDocument()
     expect(screen.getByText('Users')).toBeInTheDocument()
+    expect(screen.queryByText('Analytics')).not.toBeInTheDocument()
     expect(screen.queryByText('Dispatch')).not.toBeInTheDocument()
   })
 

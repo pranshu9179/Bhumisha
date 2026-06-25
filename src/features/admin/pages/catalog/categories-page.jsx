@@ -1,5 +1,6 @@
 import { Edit2, Plus } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { DataTable } from '@/components/data-table/data-table'
 import { StatusBadge } from '@/components/feedback/status-badge'
 import { Button } from '@/components/ui/button'
@@ -8,12 +9,13 @@ import { CategoryDialog } from '@/features/admin/components/catalog/category-dia
 import { CategoryToggleButton } from '@/features/admin/components/catalog/category-toggle-button'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { RecordDetailsDialog } from '@/features/shared/components/record-details-dialog'
-import { useCategories } from '@/services/api/hooks'
+import { useCategories, useCategoryDeleteMutation } from '@/services/api/hooks'
 
 export function CategoriesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState(null)
   const { data: categories = [], isLoading } = useCategories({ page: 1, limit: 100 })
+  const deleteMutation = useCategoryDeleteMutation()
 
   const activeCategories = useMemo(
     () => categories.filter((category) => category.status !== 'deleted'),
@@ -109,6 +111,13 @@ export function CategoriesPage() {
             data={activeCategories}
             searchPlaceholder="Search active crop categories"
             emptyMessage={isLoading ? 'Loading crop categories...' : 'No active crop categories found.'}
+            onBulkDelete={async (rows) => {
+              for (const row of rows) {
+                await deleteMutation.mutateAsync(row.id)
+              }
+              toast.success(`${rows.length} crop categor${rows.length === 1 ? 'y' : 'ies'} deleted successfully.`)
+            }}
+            bulkDeleteConfirmMessage="Delete selected crop categories?"
           />
         </TabsContent>
         <TabsContent value="deleted">
@@ -125,6 +134,14 @@ export function CategoriesPage() {
             data={categories}
             searchPlaceholder="Search crop categories"
             emptyMessage={isLoading ? 'Loading crop categories...' : 'No crop categories found.'}
+            onBulkDelete={async (rows) => {
+              const deletableRows = rows.filter((row) => row.status !== 'deleted')
+              for (const row of deletableRows) {
+                await deleteMutation.mutateAsync(row.id)
+              }
+              toast.success(`${deletableRows.length} crop categor${deletableRows.length === 1 ? 'y' : 'ies'} deleted successfully.`)
+            }}
+            bulkDeleteConfirmMessage="Delete selected active crop categories? Deleted rows will be skipped."
           />
         </TabsContent>
       </Tabs>
@@ -142,4 +159,3 @@ export function CategoriesPage() {
 }
 
 export default CategoriesPage
-

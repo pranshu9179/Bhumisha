@@ -1,6 +1,6 @@
 import { API_BASE_URL, apiClient } from "@/services/api/client";
 
-function unwrapList(response, keys = ["data", "categories", "cropCategories", "users", "cropDetails", "cropDiseases", "diseases"]) {
+function unwrapList(response, keys = ["data", "categories", "subcategories", "vendorCategories", "productCategories", "cropCategories", "users", "cropDetails", "cropDiseases", "diseases"]) {
   if (Array.isArray(response)) return response;
   for (const key of keys) {
     if (Array.isArray(response?.[key])) return response[key];
@@ -16,11 +16,12 @@ function unwrapPagination(response) {
     total:
       source.total ??
       source.totalRecords ??
+      source.total_records ??
       source.count ??
       unwrapList(response).length,
     page: source.page ?? 1,
     limit: source.limit,
-    totalPages: source.totalPages ?? 1,
+    totalPages: source.totalPages ?? source.total_pages ?? 1,
   };
 }
 
@@ -35,6 +36,19 @@ function localized(record, locale = "english") {
 
 function firstPresent(...values) {
   return values.find((value) => value !== undefined && value !== null && value !== "");
+}
+
+function toBooleanFlag(value) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    return ["1", "true", "yes", "deleted", "disabled"].includes(value.trim().toLowerCase());
+  }
+  return false;
+}
+
+function isDeletedRecord(...values) {
+  return values.some((value) => toBooleanFlag(value));
 }
 
 function assetBaseUrl() {
@@ -109,9 +123,7 @@ function normalizeUser(record) {
   const deleteFlag = source.is_delete ?? source.isDelete;
   const statusValue = source.status ?? source.is_active ?? source.active;
   const isDeleted =
-    deleteFlag === true ||
-    deleteFlag === 1 ||
-    deleteFlag === "1" ||
+    toBooleanFlag(deleteFlag) ||
     String(statusValue || "").toLowerCase() === "disabled";
 
   return {
@@ -142,7 +154,7 @@ function normalizeUser(record) {
 function normalizeCategory(record) {
   const english = localized(record);
   const hindi = localized(record, "hindi");
-  const isDeleted = Boolean(
+  const isDeleted = isDeletedRecord(
     english.is_delete ?? record?.is_delete ?? hindi.is_delete,
   );
   return {
@@ -174,7 +186,7 @@ function normalizeCrop(record) {
   const english = localized(record);
   const hindi = localized(record, "hindi");
   const category = english.category || record?.category || {};
-  const isDeleted = Boolean(
+  const isDeleted = isDeletedRecord(
     english.is_delete ?? record?.is_delete ?? hindi.is_delete,
   );
   return {
@@ -182,19 +194,29 @@ function normalizeCrop(record) {
     id: english.id ?? record?.id,
     name: firstPresent(english.name, record?.name),
     name_hi: firstPresent(hindi.name, record?.name_hi, record?.hindi_name, record?.name_hindi),
-    description: firstPresent(english.description, record?.description),
+    description: firstPresent(english.description, english.decription, record?.description, record?.decription),
     description_hi: firstPresent(
       hindi.description,
+      hindi.decription,
       record?.description_hi,
+      record?.decription_hi,
       record?.hindi_description,
       record?.description_hindi,
     ),
     categoryId:
       english.crop_category_id ?? record?.crop_category_id ?? category.id,
-    categoryName: category.name ?? record?.categoryName,
+    categoryName:
+      (typeof category === "string" ? category : category.name) ??
+      record?.categoryName ??
+      record?.category,
+    images: normalizeMedia(
+      firstPresent(english.crop_theme_image, english.image, record?.crop_theme_image, record?.image),
+    ),
     image: normalizeAssetUrl(
       firstPresent(english.crop_theme_image, english.image, record?.crop_theme_image, record?.image),
     ),
+    crop_theme_image_id: firstPresent(english.crop_theme_image_id, record?.crop_theme_image_id, []),
+    sequence: english.sequence ?? record?.sequence,
     sku: record?.sku ?? `CROP-${english.id ?? record?.id ?? ""}`,
     price: record?.price ?? 0,
     stock: record?.stock ?? 0,
@@ -205,42 +227,10 @@ function normalizeCrop(record) {
   };
 }
 
-function normalizeCropDetail(record) {
-  const english = localized(record);
-  const hindi = localized(record, "hindi");
-  const isDeleted = Boolean(
-    english.is_delete ?? record?.is_delete ?? hindi.is_delete,
-  );
-  return {
-    ...record,
-    id: english.id ?? record?.id,
-    cropId: english.crop_id ?? record?.crop_id,
-    cropName: firstPresent(english.crop_name, record?.crop_name, record?.cropName),
-    cropName_hi: firstPresent(hindi.crop_name, record?.crop_name_hi),
-    title: firstPresent(english.title, record?.title),
-    title_hi: firstPresent(hindi.title, record?.title_hi, record?.hindi_title, record?.title_hindi),
-    description: firstPresent(english.description, record?.description),
-    description_hi: firstPresent(
-      hindi.description,
-      record?.description_hi,
-      record?.hindi_description,
-      record?.description_hindi,
-    ),
-    sequence: english.sequence ?? record?.sequence,
-    images: normalizeMedia(
-      firstPresent(english.crop_details_theme_image, english.images, english.media, record?.crop_details_theme_image, record?.images, record?.media),
-    ),
-    is_delete: isDeleted,
-    status: isDeleted ? "deleted" : "active",
-    createdAt: english.createdAt ?? english.created_at ?? record?.createdAt ?? record?.created_at,
-    updatedAt: english.updatedAt ?? english.updated_at ?? record?.updatedAt ?? record?.updated_at,
-  };
-}
-
 function normalizeCropDisease(record) {
   const english = localized(record);
   const hindi = localized(record, "hindi");
-  const isDeleted = Boolean(
+  const isDeleted = isDeletedRecord(
     english.is_delete ?? record?.is_delete ?? hindi.is_delete,
   );
   const media = firstPresent(
@@ -281,6 +271,24 @@ function normalizeCropDisease(record) {
     status: isDeleted ? "deleted" : "active",
     createdAt: english.createdAt ?? english.created_at ?? record?.createdAt ?? record?.created_at,
     updatedAt: english.updatedAt ?? english.updated_at ?? record?.updatedAt ?? record?.updated_at,
+  };
+}
+
+function normalizeCheckoutResponse(response) {
+  const source = unwrapRecord(response) || response || {};
+  const order = normalizeOrder(source.order || source.data?.order || source);
+  return {
+    ...source,
+    ...order,
+    id: firstPresent(order.id, source.orderId, source.order_id),
+    orderId: firstPresent(source.orderId, source.order_id, order.id),
+    order_id: firstPresent(source.order_id, source.orderId, order.id),
+    totalAmount: Number(firstPresent(source.totalAmount, source.total_amount, order.totalAmount, order.total, 0)),
+    total_amount: Number(firstPresent(source.total_amount, source.totalAmount, order.totalAmount, order.total, 0)),
+    paymentUrl: firstPresent(source.paymentUrl, source.payment_url, source.data?.paymentUrl, source.data?.payment_url),
+    payment_url: firstPresent(source.payment_url, source.paymentUrl, source.data?.payment_url, source.data?.paymentUrl),
+    message: source.message,
+    success: source.success,
   };
 }
 
@@ -411,10 +419,6 @@ function normalizeQuery(record) {
   };
 }
 
-function normalizeQueryList(response) {
-  return listResult(response, normalizeQuery);
-}
-
 function normalizeQueryDetail(response) {
   return normalizeQuery(unwrapRecord(response));
 }
@@ -447,10 +451,6 @@ function normalizeStaffReply(record) {
     askedBy: query.askedBy,
     asked_by: query.askedBy,
   };
-}
-
-function normalizeStaffReplyList(response) {
-  return listResult(response, normalizeStaffReply);
 }
 
 function normalizeAdminQueryDetail(response) {
@@ -521,10 +521,378 @@ function normalizeMedia(value) {
   return [value].filter(Boolean);
 }
 
+function parseJsonArray(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [value];
+    } catch {
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+  }
+  return [value].filter(Boolean);
+}
+
+function normalizeShopProduct(record) {
+  const source = unwrapRecord(record) || {};
+  const visibleSource = { ...source };
+  delete visibleSource.sku;
+  delete visibleSource.product_code;
+  return {
+    ...visibleSource,
+    id: firstPresent(source.id, source.product_id, source.productId, source._id),
+    vendorId: firstPresent(source.vendor_id, source.vendorId),
+    vendor_id: firstPresent(source.vendor_id, source.vendorId),
+    name: firstPresent(source.name, source.product_name, source.title),
+    description: firstPresent(source.description, source.product_description, ""),
+    price: Number(firstPresent(source.price, source.amount, 0)),
+    mrp: Number(firstPresent(source.mrp, source.maximum_retail_price, source.price, 0)),
+    vendor_price: Number(firstPresent(source.vendor_price, source.vendorPrice, source.price, 0)),
+    vendorPrice: Number(firstPresent(source.vendorPrice, source.vendor_price, source.price, 0)),
+    stock: Number(firstPresent(source.stock, source.quantity, 0)),
+    image_url: normalizeAssetUrl(firstPresent(source.image_url, source.imageUrl, source.image, source.thumbnail)),
+    image: normalizeAssetUrl(firstPresent(source.image, source.image_url, source.imageUrl, source.thumbnail)),
+    images: normalizeMedia(firstPresent(source.images, source.product_images, source.image, source.image_url)),
+    retained_images: firstPresent(source.retained_images, source.images, source.product_images, []),
+    tags: parseJsonArray(firstPresent(source.tags, source.categories, source.category)),
+    category_id: firstPresent(source.category_id, source.categoryId),
+    categoryId: firstPresent(source.categoryId, source.category_id),
+    categoryName: firstPresent(source.categoryName, source.category_name, source.category?.name, source.category?.english?.name),
+    sub_category_id: firstPresent(source.sub_category_id, source.subCategoryId),
+    subCategoryId: firstPresent(source.subCategoryId, source.sub_category_id),
+    subCategoryName: firstPresent(source.subCategoryName, source.sub_category_name, source.subcategory?.name, source.subcategory?.english?.name),
+    product_type: firstPresent(source.product_type, source.productType, source.type),
+    productType: firstPresent(source.productType, source.product_type, source.type),
+    status: String(firstPresent(source.status, source.product_status, "published")).toLowerCase(),
+    company_name: firstPresent(source.company_name, source.companyName, source.vendor_name),
+    createdAt: firstPresent(source.createdAt, source.created_at),
+    updatedAt: firstPresent(source.updatedAt, source.updated_at),
+  };
+}
+
+function normalizeTaxonomyCategory(record) {
+  const source = unwrapRecord(record) || {};
+  const english = localized(source);
+  const hindi = localized(source, "hindi");
+  const isDeleted = isDeletedRecord(firstPresent(source.is_delete, english.is_delete, hindi.is_delete, false));
+  return {
+    ...source,
+    id: firstPresent(source.id, english.id),
+    name: firstPresent(source.name, english.name),
+    name_hi: firstPresent(source.name_hi, source.hindi_name, hindi.name),
+    category_id: firstPresent(source.category_id, source.categoryId),
+    categoryId: firstPresent(source.categoryId, source.category_id),
+    category_name: firstPresent(source.category_name, source.categoryName),
+    categoryName: firstPresent(source.categoryName, source.category_name),
+    image: normalizeAssetUrl(firstPresent(source.image, source.image_url, source.imageUrl, english.image)),
+    image_url: normalizeAssetUrl(firstPresent(source.image_url, source.imageUrl, source.image, english.image)),
+    sub_category_required: toBooleanFlag(firstPresent(source.sub_category_required, source.subCategoryRequired, false)),
+    allowed_services: firstPresent(source.allowed_services, source.allowedServices, "product_only"),
+    status: isDeleted ? "deleted" : String(firstPresent(source.status, "active")).toLowerCase(),
+    createdAt: firstPresent(source.createdAt, source.created_at),
+    updatedAt: firstPresent(source.updatedAt, source.updated_at),
+  };
+}
+
+function normalizeAddress(record) {
+  const source = unwrapRecord(record) || {};
+  return {
+    ...source,
+    id: firstPresent(source.id, source.address_id, source._id),
+    name: firstPresent(source.name, source.full_name, source.recipient_name),
+    phone: firstPresent(source.phone, source.mobile_number, source.mobile),
+    address_line: firstPresent(source.address_line, source.addressLine, source.line1, source.address),
+    city: source.city || "",
+    state: source.state || "",
+    zip_code: firstPresent(source.zip_code, source.zipCode, source.pincode, source.postal_code),
+  };
+}
+
+function checkoutPayload(payload = {}) {
+  const address = payload.shippingAddress || {};
+  return {
+    cartItems: (payload.cartItems || []).map((item) => ({
+      productId: item.productId ?? item.product_id,
+      quantity: Number(item.quantity || 0),
+    })),
+    paymentMethod: payload.paymentMethod || "Online",
+    shippingAddress: {
+      name: address.name || "",
+      phone: address.phone || "",
+      address_line: address.address_line || address.addressLine || address.address || "",
+      city: address.city || "",
+      state: address.state || "",
+      zip_code: address.zip_code || address.zipCode || address.pincode || "",
+    },
+  };
+}
+
+function normalizeOrder(record) {
+  const unwrapped = unwrapRecord(record) || {};
+  const source = unwrapped.order || unwrapped;
+  const id = firstPresent(source.id, source.order_id, source.orderId);
+  const total = Number(firstPresent(source.total, source.total_amount, source.totalAmount, 0));
+  const orderStatus = String(firstPresent(source.orderStatus, source.order_status, source.fulfillmentStatus, source.fulfillment_status, source.status, "Pending"));
+  return {
+    ...source,
+    id,
+    order_id: id,
+    vendorId: firstPresent(source.vendorId, source.vendor_id),
+    vendor_id: firstPresent(source.vendor_id, source.vendorId),
+    customerName: firstPresent(source.customerName, source.customer_name, source.name, source.username, "Customer"),
+    customer_name: firstPresent(source.customer_name, source.customerName, source.name, source.username, "Customer"),
+    productName: firstPresent(source.productName, source.product_name),
+    product_name: firstPresent(source.product_name, source.productName),
+    quantity: Number(firstPresent(source.quantity, 0)),
+    price: Number(firstPresent(source.price, source.unit_price, 0)),
+    total,
+    total_amount: total,
+    totalAmount: total,
+    payment_method: firstPresent(source.payment_method, source.paymentMethod),
+    paymentMethod: firstPresent(source.paymentMethod, source.payment_method),
+    phonepe_transaction_id: firstPresent(source.phonepe_transaction_id, source.phonepeTransactionId, source.transaction_id),
+    phonepeTransactionId: firstPresent(source.phonepeTransactionId, source.phonepe_transaction_id, source.transaction_id),
+    paymentStatus: String(firstPresent(source.paymentStatus, source.payment_status, source.payment, "pending")).toLowerCase(),
+    payment_status: firstPresent(source.payment_status, source.paymentStatus, "Pending"),
+    fulfillmentStatus: orderStatus.toLowerCase(),
+    orderStatus,
+    order_status: orderStatus,
+    items: source.items || source.cartItems || source.products || [],
+    createdAt: firstPresent(source.createdAt, source.created_at, source.order_date),
+    created_at: firstPresent(source.created_at, source.createdAt, source.order_date),
+    dispatchAt: firstPresent(source.dispatchAt, source.dispatch_at),
+  };
+}
+
+function normalizeReturnRequest(record) {
+  const source = unwrapRecord(record) || {};
+  const id = firstPresent(source.id, source.return_id, source.returnRequestId);
+  return {
+    ...source,
+    id,
+    return_id: id,
+    orderId: firstPresent(source.orderId, source.order_id),
+    order_id: firstPresent(source.order_id, source.orderId),
+    orderItemId: firstPresent(source.orderItemId, source.order_item_id),
+    order_item_id: firstPresent(source.order_item_id, source.orderItemId),
+    productName: firstPresent(source.productName, source.product_name, source.name),
+    product_name: firstPresent(source.product_name, source.productName, source.name),
+    vendorId: firstPresent(source.vendorId, source.vendor_id),
+    vendor_id: firstPresent(source.vendor_id, source.vendorId),
+    userId: firstPresent(source.userId, source.user_id),
+    user_id: firstPresent(source.user_id, source.userId),
+    quantity: Number(firstPresent(source.quantity, 0)),
+    reason: firstPresent(source.reason, source.return_reason, ""),
+    status: String(firstPresent(source.status, "Pending")),
+    images: normalizeMedia(firstPresent(source.parsed_images, source.images, source.files, source.media)),
+    parsed_images: normalizeMedia(firstPresent(source.parsed_images, source.images, source.files, source.media)),
+    createdAt: firstPresent(source.createdAt, source.created_at),
+    updatedAt: firstPresent(source.updatedAt, source.updated_at),
+  };
+}
+
+function normalizeSalesReportRow(record) {
+  const source = unwrapRecord(record) || {};
+  const orderId = firstPresent(source.order_id, source.orderId, source.id);
+  const quantity = Number(firstPresent(source.quantity, source.total_quantity, 0));
+  const price = Number(firstPresent(source.price, source.unit_price, 0));
+  const itemTotal = Number(firstPresent(source.item_total, source.itemTotal, source.lineTotal, quantity * price, 0));
+
+  return {
+    ...source,
+    id: firstPresent(source.id, orderId),
+    order_id: orderId,
+    orderId,
+    createdAt: firstPresent(source.createdAt, source.created_at, source.order_date),
+    created_at: firstPresent(source.created_at, source.createdAt, source.order_date),
+    paymentStatus: String(firstPresent(source.paymentStatus, source.payment_status, "pending")).toLowerCase(),
+    payment_status: firstPresent(source.payment_status, source.paymentStatus, "Pending"),
+    orderStatus: String(firstPresent(source.orderStatus, source.order_status, source.status, "Pending")),
+    order_status: String(firstPresent(source.order_status, source.orderStatus, source.status, "Pending")),
+    quantity,
+    price,
+    item_total: itemTotal,
+    itemTotal,
+    productName: firstPresent(source.productName, source.product_name, source.name),
+    product_name: firstPresent(source.product_name, source.productName, source.name),
+    vendorName: firstPresent(source.vendorName, source.vendor_name, source.company_name),
+    vendor_name: firstPresent(source.vendor_name, source.vendorName, source.company_name),
+    customerName: firstPresent(source.customerName, source.customer_name, source.username),
+    customer_name: firstPresent(source.customer_name, source.customerName, source.username),
+    vendorId: firstPresent(source.vendorId, source.vendor_id),
+    vendor_id: firstPresent(source.vendor_id, source.vendorId),
+  };
+}
+
+function normalizeVendorProfile(record) {
+  const source = unwrapRecord(record) || {};
+  return {
+    ...source,
+    id: firstPresent(source.id, source.vendor_id, source.vendorId),
+    userId: firstPresent(source.userId, source.user_id),
+    user_id: firstPresent(source.user_id, source.userId),
+    full_name: firstPresent(source.full_name, source.fullName, source.name),
+    company_name: firstPresent(source.company_name, source.companyName, source.company),
+    mobile_number: firstPresent(source.mobile_number, source.mobileNumber, source.phone),
+    vendor_type: firstPresent(source.vendor_type, source.vendorType),
+    categories: parseJsonArray(source.categories),
+    status: String(firstPresent(source.status, "Active")),
+    createdAt: firstPresent(source.createdAt, source.created_at),
+    updatedAt: firstPresent(source.updatedAt, source.updated_at),
+  };
+}
+
+function normalizeVendorRegistration(response) {
+  const source = unwrapRecord(response) || {};
+  const user = source.user || response?.user;
+  return {
+    ...source,
+    ...normalizeVendorProfile(source),
+    user: user ? normalizeUser(user) : null,
+  };
+}
+
+function normalizeSalesReport(response) {
+  const source = unwrapRecord(response) || {};
+  const rawRows = Array.isArray(source)
+    ? source
+    : Array.isArray(source.data)
+      ? source.data
+      : Array.isArray(response?.data)
+        ? response.data
+        : unwrapList(response);
+  const rows = rawRows.map(normalizeSalesReportRow);
+  const computedTotal = rows.reduce((sum, row) => sum + Number(row.itemTotal || 0), 0);
+  const totalAmount = Number(firstPresent(source.totalAmount, source.total_amount, source.total_earnings, source.totalEarnings, computedTotal, 0));
+  const totalItemsSold = rows.reduce((sum, row) => sum + Number(firstPresent(row.quantity, row.total_quantity, 0)), 0);
+  const orderIds = new Set(rows.map((row) => row.order_id || row.orderId).filter(Boolean));
+  return {
+    ...source,
+    rows,
+    data: rows,
+    totalAmount,
+    total_amount: totalAmount,
+    total_earnings: Number(firstPresent(source.total_earnings, source.totalEarnings, source.revenue, totalAmount)),
+    totalEarnings: Number(firstPresent(source.totalEarnings, source.total_earnings, source.revenue, totalAmount)),
+    total_orders: Number(firstPresent(source.total_orders, source.totalOrders, source.orders, orderIds.size || rows.length)),
+    totalOrders: Number(firstPresent(source.totalOrders, source.total_orders, source.orders, orderIds.size || rows.length)),
+    total_items_sold: Number(firstPresent(source.total_items_sold, source.totalItemsSold, source.itemsSold, totalItemsSold)),
+    totalItemsSold: Number(firstPresent(source.totalItemsSold, source.total_items_sold, source.itemsSold, totalItemsSold)),
+  };
+}
+
+function normalizeMandiRate(record) {
+  const source = unwrapRecord(record) || {};
+  const minPrice = Number(firstPresent(source.min_price, source.minPrice, 0));
+  const maxPrice = Number(firstPresent(source.max_price, source.maxPrice, 0));
+  const modalPrice = Number(firstPresent(source.total_modal, source.totalModal, source.modal_price, source.average_price, 0));
+  return {
+    ...source,
+    id: firstPresent(source.id, source.mandi_id, source.rate_id),
+    crop_id: firstPresent(source.crop_id, source.cropId),
+    cropId: firstPresent(source.cropId, source.crop_id),
+    crop_name: firstPresent(source.crop_name, source.cropName, source.name),
+    cropName: firstPresent(source.cropName, source.crop_name, source.name),
+    crop_name_hi: firstPresent(source.crop_name_hi, source.cropNameHi, source.name_hi),
+    cropNameHi: firstPresent(source.cropNameHi, source.crop_name_hi, source.name_hi),
+    record_date: firstPresent(source.record_date, source.recordDate, source.date),
+    recordDate: firstPresent(source.recordDate, source.record_date, source.date),
+    min_price: minPrice,
+    minPrice,
+    max_price: maxPrice,
+    maxPrice,
+    total_modal: modalPrice,
+    totalModal: modalPrice,
+    createdAt: firstPresent(source.createdAt, source.created_at),
+    updatedAt: firstPresent(source.updatedAt, source.updated_at),
+  };
+}
+
+function normalizeSettlement(record) {
+  const source = unwrapRecord(record) || {};
+  return {
+    ...source,
+    id: firstPresent(source.id, source.settlement_id),
+    vendorId: firstPresent(source.vendorId, source.vendor_id),
+    vendor_id: firstPresent(source.vendor_id, source.vendorId),
+    vendorName: firstPresent(source.vendorName, source.vendor_name, source.company_name),
+    vendor_name: firstPresent(source.vendor_name, source.vendorName, source.company_name),
+    amount: Number(firstPresent(source.amount, source.settlement_amount, 0)),
+    remark: firstPresent(source.remark, source.notes, ""),
+    proof_image: normalizeAssetUrl(firstPresent(source.proof_image, source.proofImage, source.image)),
+    proofImage: normalizeAssetUrl(firstPresent(source.proofImage, source.proof_image, source.image)),
+    createdAt: firstPresent(source.createdAt, source.created_at),
+    updatedAt: firstPresent(source.updatedAt, source.updated_at),
+  };
+}
+
+function normalizeGuideParent(record) {
+  const source = unwrapRecord(record) || {};
+  const isDeleted = isDeletedRecord(source.is_delete, source.isDelete);
+  return {
+    ...source,
+    id: firstPresent(source.id, source.parent_id),
+    crops_guid_heading_id: firstPresent(source.crops_guid_heading_id, source.heading_id, source.headingId),
+    headingId: firstPresent(source.headingId, source.heading_id, source.crops_guid_heading_id),
+    crop_id: firstPresent(source.crop_id, source.cropId),
+    cropId: firstPresent(source.cropId, source.crop_id),
+    heading_name: firstPresent(source.heading_name, source.headingName, source.title),
+    headingName: firstPresent(source.headingName, source.heading_name, source.title),
+    crop_name: firstPresent(source.crop_name, source.cropName, source.name),
+    cropName: firstPresent(source.cropName, source.crop_name, source.name),
+    status: isDeleted ? "deleted" : String(firstPresent(source.status, "active")).toLowerCase(),
+    is_delete: isDeleted,
+    createdAt: firstPresent(source.createdAt, source.created_at),
+    updatedAt: firstPresent(source.updatedAt, source.updated_at),
+  };
+}
+
+function normalizeBrokerageLead(record) {
+  const source = unwrapRecord(record) || {};
+  return {
+    ...source,
+    id: firstPresent(source.id, source.lead_id, source.leadRequestId),
+    categoryName: firstPresent(source.categoryName, source.category_name),
+    category_name: firstPresent(source.category_name, source.categoryName),
+    userId: firstPresent(source.userId, source.user_id),
+    userName: firstPresent(source.userName, source.user_name, source.customer_name, source.username, source.name),
+    customerName: firstPresent(source.customerName, source.customer_name, source.userName, source.user_name),
+    customerPhone: firstPresent(source.customerPhone, source.customer_phone, source.phone),
+    status: String(firstPresent(source.status, "pending")).toLowerCase(),
+    createdAt: firstPresent(source.createdAt, source.created_at),
+    notes: source.notes || "",
+  };
+}
+
+function normalizeBrokerageDeal(record) {
+  const source = unwrapRecord(record) || {};
+  return {
+    ...source,
+    id: firstPresent(source.id, source.deal_id),
+    leadRequestId: firstPresent(source.leadRequestId, source.lead_request_id),
+    lead_request_id: firstPresent(source.lead_request_id, source.leadRequestId),
+    vendorId: firstPresent(source.vendorId, source.vendor_id),
+    vendor_id: firstPresent(source.vendor_id, source.vendorId),
+    userId: firstPresent(source.userId, source.user_id),
+    user_id: firstPresent(source.user_id, source.userId),
+    dealAmount: Number(firstPresent(source.dealAmount, source.deal_amount, 0)),
+    deal_amount: Number(firstPresent(source.deal_amount, source.dealAmount, 0)),
+    commissionAmount: Number(firstPresent(source.commissionAmount, source.commission_amount, 0)),
+    commission_amount: Number(firstPresent(source.commission_amount, source.commissionAmount, 0)),
+    status: String(firstPresent(source.status, "logged")).toLowerCase(),
+    createdAt: firstPresent(source.createdAt, source.created_at),
+  };
+}
+
 function normalizeHeading(record) {
   const english = localized(record);
   const hindi = localized(record, "hindi");
-  const isDeleted = Boolean(
+  const isDeleted = isDeletedRecord(
     english.is_delete ?? record?.is_delete ?? hindi.is_delete,
   );
   return {
@@ -542,7 +910,7 @@ function normalizeHeading(record) {
 function normalizeGuideDetail(record, context = {}) {
   const english = localized(record);
   const hindi = localized(record, "hindi");
-  const isDeleted = Boolean(
+  const isDeleted = isDeletedRecord(
     english.is_delete ?? record?.is_delete ?? hindi.is_delete,
   );
 
@@ -620,6 +988,45 @@ function normalizeGuideDetailsResponse(response) {
     const englishCrop = localized(cropGroup);
     const hindiCrop = localized(cropGroup, "hindi");
     const headings = englishCrop.headings || cropGroup?.headings || [];
+
+    if (!headings.length) {
+      const directDetails = englishCrop.details || cropGroup?.details;
+      if (Array.isArray(directDetails) && directDetails.length) {
+        return directDetails.map((detail) =>
+          normalizeGuideDetail(detail, {
+            cropId: englishCrop.crop_id ?? cropGroup?.crop_id,
+            cropName: englishCrop.crop_name ?? cropGroup?.crop_name,
+            cropName_hi: hindiCrop.crop_name ?? cropGroup?.crop_name_hi,
+            headingId: englishCrop.crops_guid_heading_id ?? englishCrop.heading_id ?? cropGroup?.crops_guid_heading_id ?? cropGroup?.heading_id,
+            headingName: englishCrop.heading_name ?? englishCrop.heading_title ?? cropGroup?.heading_name,
+            headingName_hi: hindiCrop.heading_name ?? hindiCrop.heading_title ?? cropGroup?.heading_name_hi,
+          }),
+        );
+      }
+
+      if (
+        firstPresent(
+          englishCrop.id,
+          englishCrop.detail_id,
+          englishCrop.title,
+          cropGroup?.id,
+          cropGroup?.detail_id,
+          cropGroup?.title,
+        )
+      ) {
+        return [
+          normalizeGuideDetail(cropGroup, {
+            cropId: englishCrop.crop_id ?? cropGroup?.crop_id,
+            cropName: englishCrop.crop_name ?? cropGroup?.crop_name,
+            cropName_hi: hindiCrop.crop_name ?? cropGroup?.crop_name_hi,
+            headingId: englishCrop.crops_guid_heading_id ?? englishCrop.heading_id ?? cropGroup?.crops_guid_heading_id ?? cropGroup?.heading_id,
+            headingName: englishCrop.heading_name ?? englishCrop.heading_title ?? cropGroup?.heading_name,
+            headingName_hi: hindiCrop.heading_name ?? hindiCrop.heading_title ?? cropGroup?.heading_name_hi,
+          }),
+        ];
+      }
+    }
+
     const hindiHeadings = hindiCrop.headings || [];
     const hindiHeadingById = new Map(
       hindiHeadings.map((heading) => [
@@ -678,6 +1085,73 @@ function listResult(response, normalizer) {
   return Object.assign(data, { pagination });
 }
 
+function mergeListResults(results, normalizer) {
+  const data = results.flatMap((response) => unwrapList(response).map(normalizer));
+  const pagination = unwrapPagination(results[0]);
+  return Object.assign(data, {
+    pagination: pagination
+      ? {
+          ...pagination,
+          page: 1,
+          total: pagination.total ?? data.length,
+          totalPages: 1,
+        }
+      : null,
+  });
+}
+
+async function listAllPages(fetchPage, params = {}, normalizer, { defaultLimit = 100 } = {}) {
+  const responses = await collectPaginatedResponses(fetchPage, params, { defaultLimit });
+
+  if (responses.length === 1) {
+    return listResult(responses[0], normalizer);
+  }
+
+  return mergeListResults(responses, normalizer);
+}
+
+async function collectPaginatedResponses(fetchPage, params = {}, { defaultLimit = 100 } = {}) {
+  const firstParams = {
+    ...params,
+    page: params.page ?? 1,
+    limit: params.limit ?? defaultLimit,
+  };
+  const firstResponse = await fetchPage(firstParams);
+  const firstPagination = unwrapPagination(firstResponse);
+
+  if (!firstPagination?.totalPages || Number(firstPagination.totalPages) <= Number(firstPagination.page || 1)) {
+    return [firstResponse];
+  }
+
+  const totalPages = Number(firstPagination.totalPages);
+  const responses = [firstResponse];
+
+  for (let page = Number(firstPagination.page || 1) + 1; page <= totalPages; page += 1) {
+    responses.push(await fetchPage({ ...firstParams, page }));
+  }
+
+  return responses;
+}
+
+function mergeGuideDetailsResponses(responses) {
+  const normalizedResponses = responses.map(normalizeGuideDetailsResponse);
+  const details = normalizedResponses.flatMap((items) => items);
+  const groups = normalizedResponses.flatMap((items) => items.groups || []);
+  const pagination = unwrapPagination(responses[0]);
+
+  return Object.assign(details, {
+    groups,
+    pagination: pagination
+      ? {
+          ...pagination,
+          page: 1,
+          total: pagination.total ?? details.length,
+          totalPages: 1,
+        }
+      : null,
+  });
+}
+
 function toFormData(payload = {}, fileFields = []) {
   const formData = new FormData();
   Object.entries(payload).forEach(([key, value]) => {
@@ -717,6 +1191,29 @@ function cropDiseaseFormData(payload = {}) {
   return formData;
 }
 
+function shopProductFormData(payload = {}) {
+  const normalizedPayload = {
+    ...payload,
+    tags: Array.isArray(payload.tags) ? JSON.stringify(payload.tags) : payload.tags,
+    retained_images: Array.isArray(payload.retained_images)
+      ? JSON.stringify(payload.retained_images)
+      : payload.retained_images,
+  };
+  return toFormData(normalizedPayload, ["image"]);
+}
+
+function cropImagesFormData(payload = {}) {
+  const formData = new FormData();
+  appendFiles(formData, "crop_theme_image", payload.crop_theme_image);
+  if (payload.deleteIndexes !== undefined && payload.deleteIndexes !== null && payload.deleteIndexes !== "") {
+    formData.append(
+      "deleteIndexes",
+      Array.isArray(payload.deleteIndexes) ? JSON.stringify(payload.deleteIndexes) : payload.deleteIndexes,
+    );
+  }
+  return formData;
+}
+
 function jsonConfig() {
   return { headers: { "Content-Type": "application/json" } };
 }
@@ -730,7 +1227,10 @@ export const authApi = {
     (
       await apiClient.post(
         "/auth/register",
-        toFormData(payload, ["profile_image"]),
+        toFormData({
+          ...payload,
+          full_name: payload.full_name ?? payload.username,
+        }, ["profile_image"]),
         formConfig(),
       )
     ).data,
@@ -739,12 +1239,11 @@ export const authApi = {
   resendOtp: async (payload) =>
     (await apiClient.post("/auth/resend", payload, jsonConfig())).data,
   login: async (payload) => {
-    const username = payload.username || payload.email;
     return normalizeAuthSession(
       (
         await apiClient.post(
           "/auth/login",
-          { username, password: payload.password },
+          { phone: payload.phone, password: payload.password },
           jsonConfig(),
         )
       ).data,
@@ -766,8 +1265,9 @@ export const authApi = {
 
 export const cropCategoriesApi = {
   list: async (params = {}) =>
-    listResult(
-      (await apiClient.get("/crop-category/", { params })).data,
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/crop-category/", { params: pageParams })).data,
+      params,
       normalizeCategory,
     ),
   detail: async (id) =>
@@ -793,8 +1293,9 @@ export const cropCategoriesApi = {
 
 export const cropsApi = {
   list: async (params = {}) =>
-    listResult(
-      (await apiClient.get("/crops/getAll-crop", { params })).data,
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/crops/getAll-crop", { params: pageParams })).data,
+      params,
       normalizeCrop,
     ),
   detail: async (id) => {
@@ -825,62 +1326,27 @@ export const cropsApi = {
         ).data,
       ),
     ),
+  updateImages: async (id, payload) =>
+    normalizeCrop(
+      unwrapRecord(
+        (
+          await apiClient.put(
+            `/crops/update-crop-images/${id}`,
+            cropImagesFormData(payload),
+            formConfig(),
+          )
+        ).data,
+      ),
+    ),
   toggleStatus: async (id) =>
     (await apiClient.put(`/crops/toggle-crop-status/${id}`)).data,
 };
 
-export const cropDetailsApi = {
-  list: async (params = {}) =>
-    listResult(
-      (await apiClient.get("/crops_details/getAll-crop-detail", { params }))
-        .data,
-      normalizeCropDetail,
-    ),
-  create: async (payload) =>
-    normalizeCropDetail(
-      unwrapRecord(
-        (
-          await apiClient.post(
-            "/crops_details/create-crop-detail",
-            toFormData(payload, ["crop_details_theme_image"]),
-            formConfig(),
-          )
-        ).data,
-      ),
-    ),
-  update: async (id, payload) =>
-    normalizeCropDetail(
-      unwrapRecord(
-        (
-          await apiClient.put(
-            `/crops_details/update-crop-details/${id}`,
-            toFormData(payload, ["crop_details_theme_image"]),
-            formConfig(),
-          )
-        ).data,
-      ),
-    ),
-  toggleStatus: async (id) =>
-    (await apiClient.put(`/crops_details/toggle-crop-detail-status/${id}`))
-      .data,
-  updateImages: async (id, payload) =>
-    normalizeCropDetail(
-      unwrapRecord(
-        (
-          await apiClient.put(
-            `/crops_details/update-crop-detail-images/${id}`,
-            toFormData(payload, ["crop_details_theme_image"]),
-            formConfig(),
-          )
-        ).data,
-      ),
-    ),
-};
-
 export const cropDiseaseApi = {
   list: async (params = {}) =>
-    listResult(
-      (await apiClient.get("/crop-disease/", { params })).data,
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/crop-disease/", { params: pageParams })).data,
+      params,
       normalizeCropDisease,
     ),
   detail: async (id) =>
@@ -915,9 +1381,10 @@ export const cropDiseaseApi = {
 };
 
 export const guideHeadingsApi = {
-  list: async () =>
-    listResult(
-      (await apiClient.get("/crops_guid_heading/heading")).data,
+  list: async (params = {}) =>
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/crops_guid_heading/heading", { params: pageParams })).data,
+      params,
       normalizeHeading,
     ),
   detail: async (id) =>
@@ -963,13 +1430,19 @@ export const guideHeadingsApi = {
 };
 
 export const guideDetailsApi = {
-  list: async () =>
-    normalizeGuideDetailsResponse(
-      (await apiClient.get("/crop_guid_details/detail")).data,
+  list: async (params = {}) =>
+    mergeGuideDetailsResponses(
+      await collectPaginatedResponses(
+        async (pageParams) => (await apiClient.get("/crop_guid_details/detail", { params: pageParams })).data,
+        params,
+      ),
     ),
-  byCrop: async (cropId) =>
-    normalizeGuideDetailsResponse(
-      (await apiClient.get(`/crop_guid_details/detail/${cropId}`)).data,
+  byCrop: async (cropId, params = {}) =>
+    mergeGuideDetailsResponses(
+      await collectPaginatedResponses(
+        async (pageParams) => (await apiClient.get(`/crop_guid_details/detail/${cropId}`, { params: pageParams })).data,
+        params,
+      ),
     ),
   create: async (payload) => {
     const formData = new FormData();
@@ -1040,11 +1513,15 @@ export const categoriesApi = {
   detail: cropCategoriesApi.detail,
   create: async (payload) =>
     cropCategoriesApi.create({
+      name: payload.name ?? payload.cropCategory,
+      name_hi: payload.name_hi ?? payload.cropCategory_hi ?? null,
       cropCategory: payload.cropCategory ?? payload.name,
       cropCategory_hi: payload.cropCategory_hi ?? payload.name_hi ?? null,
     }),
   update: async (id, payload) =>
     cropCategoriesApi.update(id, {
+      name: payload.name ?? payload.cropCategory,
+      name_hi: payload.name_hi ?? payload.cropCategory_hi ?? null,
       cropCategory: payload.cropCategory ?? payload.name,
       cropCategory_hi: payload.cropCategory_hi ?? payload.name_hi ?? null,
     }),
@@ -1058,48 +1535,177 @@ export const productsApi = {
     cropsApi.create({
       name: payload.name,
       name_hi: payload.name_hi ?? null,
-      description: payload.description,
-      description_hi: payload.description_hi ?? null,
+      description: payload.description ?? payload.decription ?? null,
+      description_hi: payload.description_hi ?? payload.decription_hi ?? null,
       crop_category_id: payload.crop_category_id ?? payload.categoryId,
+      sequence: payload.sequence ?? null,
       crop_theme_image: payload.crop_theme_image,
     }),
   update: async (id, payload) =>
     cropsApi.update(id, {
       name: payload.name,
       name_hi: payload.name_hi ?? null,
-      description: payload.description,
-      description_hi: payload.description_hi ?? null,
+      description: payload.description ?? payload.decription ?? null,
+      description_hi: payload.description_hi ?? payload.decription_hi ?? null,
       crop_category_id: payload.crop_category_id ?? payload.categoryId,
-      crop_theme_image: payload.crop_theme_image,
+      sequence: payload.sequence ?? null,
     }),
+  updateImages: cropsApi.updateImages,
   remove: cropsApi.toggleStatus,
 };
 
-export const analyticsApi = {
-  overview: async (role) =>
-    (await apiClient.get("/analytics/overview", { params: { role } })).data,
+export const productCategoriesApi = {
+  list: async (params = {}) =>
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/product-categories", { params: pageParams })).data,
+      params,
+      normalizeTaxonomyCategory,
+    ),
+  create: async (payload) =>
+    normalizeTaxonomyCategory(
+      unwrapRecord((await apiClient.post("/product-categories", payload, jsonConfig())).data),
+    ),
+  update: async (id, payload) =>
+    normalizeTaxonomyCategory(
+      unwrapRecord((await apiClient.put(`/product-categories/${id}`, payload, jsonConfig())).data),
+    ),
+  toggleDelete: async (id) =>
+    (await apiClient.patch(`/product-categories/toggle-delete/${id}`)).data,
+  subcategories: async (params = {}) =>
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/product-categories/subcategory", { params: pageParams })).data,
+      params,
+      normalizeTaxonomyCategory,
+    ),
+  createSubcategory: async (payload) =>
+    normalizeTaxonomyCategory(
+      unwrapRecord((await apiClient.post("/product-categories/subcategory", toFormData(payload, ["image"]), formConfig())).data),
+    ),
+  updateSubcategory: async (id, payload) =>
+    normalizeTaxonomyCategory(
+      unwrapRecord((await apiClient.put(`/product-categories/subcategory/${id}`, toFormData(payload, ["image"]), formConfig())).data),
+    ),
+  toggleDeleteSubcategory: async (id) =>
+    (await apiClient.patch(`/product-categories/subcategory/toggle-delete/${id}`)).data,
+};
+
+export const vendorCategoriesApi = {
+  list: async (params = {}) =>
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/vendor-categories", { params: pageParams })).data,
+      params,
+      normalizeTaxonomyCategory,
+    ),
+  create: async (payload) =>
+    normalizeTaxonomyCategory(
+      unwrapRecord((await apiClient.post("/vendor-categories", payload, jsonConfig())).data),
+    ),
+  update: async (id, payload) =>
+    normalizeTaxonomyCategory(
+      unwrapRecord((await apiClient.put(`/vendor-categories/${id}`, payload, jsonConfig())).data),
+    ),
+  toggleDelete: async (id) =>
+    (await apiClient.patch(`/vendor-categories/toggle-delete/${id}`)).data,
+};
+
+export const shopProductsApi = {
+  list: async (params = {}) =>
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/products/all", { params: pageParams })).data,
+      params,
+      normalizeShopProduct,
+    ),
+  detail: async (id) => {
+    const products = await shopProductsApi.list({ limit: 100 });
+    return products.find((product) => String(product.id) === String(id)) || null;
+  },
+  create: async (payload) =>
+    normalizeShopProduct(
+      unwrapRecord((await apiClient.post("/products/create", shopProductFormData(payload), formConfig())).data),
+    ),
+  update: async (id, payload) =>
+    normalizeShopProduct(
+      unwrapRecord((await apiClient.put(`/products/update/${id}`, shopProductFormData(payload), formConfig())).data),
+    ),
+  remove: async (id) =>
+    (await apiClient.delete(`/products/delete/${id}`)).data,
+};
+
+export const vendorApi = {
+  register: async (payload) =>
+    normalizeVendorRegistration(
+      (await apiClient.post("/vendor/register", payload, jsonConfig())).data,
+    ),
+  profile: async () =>
+    normalizeVendorProfile((await apiClient.get("/vendor/profile")).data),
+  updateProfile: async (id, payload) =>
+    normalizeVendorProfile(
+      unwrapRecord((await apiClient.put(`/vendor/profile/${id}`, payload, jsonConfig())).data),
+    ),
+  all: async () =>
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/vendor/all", { params: pageParams })).data,
+      {},
+      normalizeVendorProfile,
+    ),
+  serviceProviders: async () =>
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/vendor/service-providers", { params: pageParams })).data,
+      {},
+      normalizeVendorProfile,
+    ),
+  byCategory: async (categoryId, params = {}) =>
+    listAllPages(
+      async (pageParams) => (await apiClient.get(`/vendor/getall-vendor-by-category/${categoryId}`, { params: pageParams })).data,
+      params,
+      normalizeVendorProfile,
+    ),
+  updateStatus: async (id, status) =>
+    (await apiClient.patch(`/vendor/status/${id}`, { status }, jsonConfig())).data,
+};
+
+export const addressesApi = {
+  list: async () =>
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/addresses", { params: pageParams })).data,
+      {},
+      normalizeAddress,
+    ),
+  create: async (payload) =>
+    normalizeAddress(
+      unwrapRecord((await apiClient.post("/addresses", payload, jsonConfig())).data),
+    ),
+  update: async (id, payload) =>
+    normalizeAddress(
+      unwrapRecord((await apiClient.put(`/addresses/${id}`, payload, jsonConfig())).data),
+    ),
+  remove: async (id) => (await apiClient.delete(`/addresses/${id}`)).data,
 };
 
 export const usersApi = {
-  list: async (params = {}) =>
-    listResult(
-      (await apiClient.get("/users", {
+  list: async (params = {}) => {
+    const requestParams = {
+      ...params,
+      role: params.role ? toApiRole(params.role) : undefined,
+    };
+    return listAllPages(
+      async (pageParams) => (await apiClient.get("/users", {
         params: {
-          ...params,
-          role: params.role ? toApiRole(params.role) : undefined,
+          ...pageParams,
         },
       })).data,
+      requestParams,
       normalizeUser,
+    );
+  },
+  me: async () =>
+    normalizeUser(
+      unwrapRecord((await apiClient.get("/users/me")).data),
     ),
-  create: async (payload) =>
-    normalizeUser(unwrapRecord((await apiClient.post("/users", payload)).data)),
-  update: async (id, payload) =>
-    normalizeUser(unwrapRecord((await apiClient.put(`/users/${id}`, payload)).data)),
   updateRole: async (id, role) =>
     (await apiClient.patch(`/users/role/${id}`, { role: toApiRole(role) }, jsonConfig())).data,
   toggleStatus: async (id) =>
     (await apiClient.patch(`/users/toggle-status/${id}`)).data,
-  remove: async (id) => (await apiClient.delete(`/users/${id}`)).data,
 };
 
 export const queriesApi = {
@@ -1114,13 +1720,25 @@ export const queriesApi = {
     ),
   list: async (params = {}) => queriesApi.adminAll(params),
   myQueries: async (params = {}) =>
-    normalizeQueryList((await apiClient.get("/queries/my-queries", { params })).data),
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/queries/my-queries", { params: pageParams })).data,
+      params,
+      normalizeQuery,
+    ),
   publicFeed: async (params = {}) =>
-    normalizeQueryList((await apiClient.get("/queries/public", { params })).data),
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/queries/public", { params: pageParams })).data,
+      params,
+      normalizeQuery,
+    ),
   detail: async (id) =>
     normalizeQueryDetail((await apiClient.get(`/queries/${id}`)).data),
   staffPending: async (params = {}) =>
-    normalizeQueryList((await apiClient.get("/queries/staff/pending", { params })).data),
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/queries/staff/pending", { params: pageParams })).data,
+      params,
+      normalizeQuery,
+    ),
   reply: async (id, payload) =>
     unwrapRecord(
       (
@@ -1131,9 +1749,17 @@ export const queriesApi = {
       ).data,
     ),
   staffMyReplies: async (params = {}) =>
-    normalizeStaffReplyList((await apiClient.get("/queries/staff/my-replies", { params })).data),
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/queries/staff/my-replies", { params: pageParams })).data,
+      params,
+      normalizeStaffReply,
+    ),
   adminAll: async (params = {}) =>
-    normalizeQueryList((await apiClient.get("/queries/admin/all", { params })).data),
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/queries/admin/all", { params: pageParams })).data,
+      params,
+      normalizeQuery,
+    ),
   adminDetail: async (id) =>
     normalizeAdminQueryDetail((await apiClient.get(`/queries/admin/${id}/detail`)).data),
   adminUserActivity: async (userId) =>
@@ -1143,59 +1769,175 @@ export const queriesApi = {
   remove: async (id) => (await apiClient.delete(`/queries/${id}`)).data,
 };
 
-export const recommendationsApi = {
-  list: async () => (await apiClient.get("/recommendations")).data,
-  create: async (payload) =>
-    (await apiClient.post("/recommendations", payload)).data,
-};
-
 export const ordersApi = {
   list: async (params = {}) =>
-    (await apiClient.get("/orders", { params })).data,
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/orders/history", { params: pageParams })).data,
+      params,
+      normalizeOrder,
+    ),
+  myOrders: async () =>
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/orders/my-orders", { params: pageParams })).data,
+      {},
+      normalizeOrder,
+    ),
+  checkout: async (payload) =>
+    normalizeCheckoutResponse((await apiClient.post("/orders/checkout", checkoutPayload(payload), jsonConfig())).data),
+  salesReport: async (params = {}) =>
+    normalizeSalesReport((await apiClient.get("/orders/sales-report", { params })).data),
   update: async (id, payload) =>
-    (await apiClient.put(`/orders/${id}`, payload)).data,
-  remove: async (id) => (await apiClient.delete(`/orders/${id}`)).data,
+    normalizeOrder(
+      unwrapRecord(
+        (
+          await apiClient.patch(
+            `/orders/status/${id}`,
+            { orderStatus: payload.orderStatus ?? payload.order_status ?? payload.fulfillmentStatus ?? payload.status },
+            jsonConfig(),
+          )
+        ).data,
+      ),
+    ),
+  updatePaymentStatus: async (id, payload) =>
+    normalizeOrder(
+      unwrapRecord(
+        (
+          await apiClient.patch(
+            `/orders/payment-status/${id}`,
+            { paymentStatus: payload.paymentStatus ?? payload.payment_status ?? payload.status },
+            jsonConfig(),
+          )
+        ).data,
+      ),
+    ),
+  phonepeCallbackGet: async (params = {}) =>
+    (await apiClient.get("/orders/phonepe/callback", { params })).data,
+  phonepeCallbackPost: async (payload = {}) =>
+    (await apiClient.post("/orders/phonepe/callback", payload, jsonConfig())).data,
 };
 
-export const escalationsApi = {
+export const returnRequestsApi = {
   list: async (params = {}) =>
-    (await apiClient.get("/escalations", { params })).data,
-  update: async (id, payload) =>
-    (await apiClient.put(`/escalations/${id}`, payload)).data,
-  remove: async (id) => (await apiClient.delete(`/escalations/${id}`)).data,
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/orders/return/list", { params: pageParams })).data,
+      params,
+      normalizeReturnRequest,
+    ),
+  request: async (payload) =>
+    unwrapRecord(
+      (
+        await apiClient.post(
+          "/orders/return/request",
+          toFormData(payload, ["files"]),
+          formConfig(),
+        )
+      ).data,
+    ),
+  handle: async (id, status) =>
+    normalizeReturnRequest(
+      unwrapRecord(
+        (
+          await apiClient.patch(
+            `/orders/return/handle/${id}`,
+            { status },
+            jsonConfig(),
+          )
+        ).data,
+      ),
+    ),
 };
 
-export const notificationsApi = {
+export const brokerageApi = {
+  createLead: async (payload) =>
+    normalizeBrokerageLead(
+      unwrapRecord((await apiClient.post("/brokerage/lead", payload, jsonConfig())).data),
+    ),
+  leads: async () =>
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/brokerage/leads", { params: pageParams })).data,
+      {},
+      normalizeBrokerageLead,
+    ),
+  createDeal: async (payload) =>
+    normalizeBrokerageDeal(
+      unwrapRecord((await apiClient.post("/brokerage/deal", payload, jsonConfig())).data),
+    ),
+  deals: async () =>
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/brokerage/deals", { params: pageParams })).data,
+      {},
+      normalizeBrokerageDeal,
+    ),
+};
+
+export const mandiApi = {
   list: async (params = {}) =>
-    (await apiClient.get("/notifications", { params })).data,
-  markRead: async (id) =>
-    (await apiClient.patch(`/notifications/${id}/read`)).data,
-};
-
-export const auditApi = {
-  list: async () => (await apiClient.get("/audit-logs")).data,
-  remove: async (id) => (await apiClient.delete(`/audit-logs/${id}`)).data,
-};
-
-export const tasksApi = {
-  list: async (params = {}) => (await apiClient.get("/tasks", { params })).data,
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/mandi", { params: pageParams })).data,
+      params,
+      normalizeMandiRate,
+    ),
+  create: async (payload) =>
+    normalizeMandiRate(
+      unwrapRecord((await apiClient.post("/mandi", payload, jsonConfig())).data),
+    ),
   update: async (id, payload) =>
-    (await apiClient.put(`/tasks/${id}`, payload)).data,
-  remove: async (id) => (await apiClient.delete(`/tasks/${id}`)).data,
+    normalizeMandiRate(
+      unwrapRecord((await apiClient.put(`/mandi/${id}`, payload, jsonConfig())).data),
+    ),
+  remove: async (id) => (await apiClient.delete(`/mandi/${id}`)).data,
 };
 
-export const supportCasesApi = {
-  list: async () => (await apiClient.get("/support-cases")).data,
+export const settlementsApi = {
+  list: async (params = {}) => {
+    const { vendorId, ...rest } = params;
+    if (!vendorId) {
+      return listAllPages(
+        async (pageParams) => (await apiClient.get("/settlements/list", { params: pageParams })).data,
+        rest,
+        normalizeSettlement,
+      );
+    }
+    return listAllPages(
+      async (pageParams) => (await apiClient.get(`/settlements/list/${vendorId}`, { params: pageParams })).data,
+      rest,
+      normalizeSettlement,
+    );
+  },
+  create: async (payload) =>
+    normalizeSettlement(
+      unwrapRecord(
+        (
+          await apiClient.post(
+            "/settlements/",
+            toFormData(payload, ["proof_image"]),
+            formConfig(),
+          )
+        ).data,
+      ),
+    ),
+};
+
+export const guideParentsApi = {
+  list: async (params = {}) =>
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/crops_guid_parent/parent", { params: pageParams })).data,
+      params,
+      normalizeGuideParent,
+    ),
+  detail: async (id) =>
+    normalizeGuideParent(
+      unwrapRecord((await apiClient.get(`/crops_guid_parent/parent/${id}`)).data),
+    ),
+  create: async (payload) =>
+    normalizeGuideParent(
+      unwrapRecord((await apiClient.post("/crops_guid_parent/parent", payload, jsonConfig())).data),
+    ),
   update: async (id, payload) =>
-    (await apiClient.put(`/support-cases/${id}`, payload)).data,
-  remove: async (id) => (await apiClient.delete(`/support-cases/${id}`)).data,
+    normalizeGuideParent(
+      unwrapRecord((await apiClient.put(`/crops_guid_parent/parent/${id}`, payload, jsonConfig())).data),
+    ),
+  remove: async (id) =>
+    (await apiClient.patch(`/crops_guid_parent/parent/delete/${id}`)).data,
 };
 
-export const settingsApi = {
-  get: async () => (await apiClient.get("/settings")).data,
-  update: async (payload) => (await apiClient.put("/settings", payload)).data,
-};
-
-export const demoApi = {
-  reset: async () => (await apiClient.post("/demo/reset")).data,
-};

@@ -1,14 +1,13 @@
-import { Bell, Menu, Search } from 'lucide-react'
+import { Menu, Search, Store } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { BreadcrumbTrail } from '@/components/app-shell/breadcrumb-trail'
-import { NotificationPanel } from '@/components/app-shell/notification-panel'
 import { ProfileMenu } from '@/components/app-shell/profile-menu'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { navigationByRole } from '@/config/navigation'
+import { ROLES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { setMobileSidebarOpen } from '@/store/ui-slice'
 
@@ -44,6 +43,15 @@ export function Topbar({ role }) {
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {role === ROLES.USER ? (
+            <Button asChild>
+              <Link to="/user/become-vendor">
+                <Store className="h-4 w-4" />
+                Become a vendor
+              </Link>
+            </Button>
+          ) : null}
+
           <div className="relative min-w-[260px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
@@ -73,17 +81,6 @@ export function Topbar({ role }) {
               </div>
             ) : null}
           </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="subtle" size="icon">
-                <Bell className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="border-none bg-transparent p-0 shadow-none">
-              <NotificationPanel />
-            </DropdownMenuContent>
-          </DropdownMenu>
 
           <ProfileMenu />
         </div>

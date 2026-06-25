@@ -27,6 +27,54 @@ function globalFilter(row, columnId, value) {
   return String(cell).toLowerCase().includes(String(value).toLowerCase())
 }
 
+function firstPresent(...values) {
+  return values.find((value) => value !== undefined && value !== null && value !== '')
+}
+
+function getCreatedTime(row) {
+  const value = firstPresent(
+    row?.createdAt,
+    row?.created_at,
+    row?.created,
+    row?.createdDate,
+    row?.created_date,
+    row?.query_created_at,
+  )
+  if (!value) return null
+  const time = new Date(value).getTime()
+  return Number.isNaN(time) ? null : time
+}
+
+function getComparableId(row) {
+  const value = firstPresent(row?.id, row?._id, row?.order_id, row?.orderId, row?.query_id, row?.queryId)
+  if (!value) return null
+  const numericValue = Number(value)
+  return Number.isNaN(numericValue) ? String(value) : numericValue
+}
+
+function sortOldestFirst(data) {
+  return [...data].sort((a, b) => {
+    const firstTime = getCreatedTime(a)
+    const secondTime = getCreatedTime(b)
+
+    if (firstTime !== null && secondTime !== null && firstTime !== secondTime) {
+      return firstTime - secondTime
+    }
+
+    if (firstTime !== null) return -1
+    if (secondTime !== null) return 1
+    const firstId = getComparableId(a)
+    const secondId = getComparableId(b)
+    if (typeof firstId === 'number' && typeof secondId === 'number') return firstId - secondId
+    if (firstId !== null && secondId !== null) return String(firstId).localeCompare(String(secondId), undefined, { numeric: true })
+    return 0
+  })
+}
+
+function isIdColumn(column) {
+  return column?.accessorKey === 'id' && String(column?.header || '').trim().toLowerCase() === 'id'
+}
+
 export function DataTable({
   columns,
   data = [],
@@ -40,10 +88,23 @@ export function DataTable({
   const [sorting, setSorting] = useState([])
   const [globalFilterValue, setGlobalFilterValue] = useState('')
   const [columnVisibility, setColumnVisibility] = useState({})
+  const sortedData = useMemo(() => sortOldestFirst(data), [data])
+  const displayColumns = useMemo(
+    () => [
+      {
+        id: '__serial',
+        header: 'No.',
+        enableSorting: false,
+        enableHiding: false,
+      },
+      ...columns.filter((column) => !isIdColumn(column)),
+    ],
+    [columns],
+  )
 
   const table = useReactTable({
-    data,
-    columns,
+    data: sortedData,
+    columns: displayColumns,
     state: {
       sorting,
       globalFilter: globalFilterValue,
@@ -136,7 +197,7 @@ export function DataTable({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
+              table.getRowModel().rows.map((row, rowIndex) => (
                 <TableRow
                   key={row.id}
                   className={onRowClick ? 'cursor-pointer' : ''}
@@ -144,14 +205,16 @@ export function DataTable({
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {cell.column.id === '__serial'
+                        ? table.getState().pagination.pageIndex * table.getState().pagination.pageSize + rowIndex + 1
+                        : flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="py-10 text-center text-slate-400">
+                <TableCell colSpan={displayColumns.length} className="py-10 text-center text-slate-400">
                   {emptyMessage}
                 </TableCell>
               </TableRow>

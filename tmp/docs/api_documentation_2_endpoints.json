@@ -1,0 +1,848 @@
+[
+  {
+    "page": 2,
+    "line": 10,
+    "type": "P",
+    "text": "Endpoint: `/auth/register`",
+    "section": "1.1 Register User",
+    "endpoint": "/auth/register",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 40,
+    "type": "P",
+    "text": "Endpoint: `/auth/login`",
+    "section": "1.2 Login User",
+    "endpoint": "/auth/login",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 63,
+    "type": "P",
+    "text": "Endpoint: `/auth/verify-otp`",
+    "section": "1.3 Verify OTP",
+    "endpoint": "/auth/verify-otp",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 78,
+    "type": "P",
+    "text": "Endpoint: `/auth/resend`",
+    "section": "1.4 Resend OTP",
+    "endpoint": "/auth/resend",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 98,
+    "type": "P",
+    "text": "Endpoint: `/auth/forget-password`",
+    "section": "1.5 Forget Password",
+    "endpoint": "/auth/forget-password",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 120,
+    "type": "P",
+    "text": "Endpoint: `/auth/update-profile-image`",
+    "section": "1.6 Update Profile Image",
+    "endpoint": "/auth/update-profile-image",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 139,
+    "type": "P",
+    "text": "Endpoint: `/auth/logout`",
+    "section": "1.7 Logout User",
+    "endpoint": "/auth/logout",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 151,
+    "type": "P",
+    "text": "Endpoint: `/users`",
+    "section": "2.1 Get All Users",
+    "endpoint": "/users",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 181,
+    "type": "P",
+    "text": "Endpoint: `/users/role/:id`",
+    "section": "2.2 Change User Role",
+    "endpoint": "/users/role/:id",
+    "method": "PATCH"
+  },
+  {
+    "page": 2,
+    "line": 195,
+    "type": "P",
+    "text": "Endpoint: `/users/toggle-status/:id`",
+    "section": "2.3 Toggle User Status (Enable/Disable)",
+    "endpoint": "/users/toggle-status/:id",
+    "method": "PATCH"
+  },
+  {
+    "page": 2,
+    "line": 210,
+    "type": "P",
+    "text": "Endpoint: `/crops/create-crop`",
+    "section": "3.1 Create Crop",
+    "endpoint": "/crops/create-crop",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 266,
+    "type": "P",
+    "text": "Endpoint: `/crops/getAll-crop`",
+    "section": "3.2 Get All Crops",
+    "endpoint": "/crops/getAll-crop",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 324,
+    "type": "P",
+    "text": "Endpoint: `/crops/update-crop/:id`",
+    "section": "3.3 Update Crop",
+    "endpoint": "/crops/update-crop/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 349,
+    "type": "P",
+    "text": "Endpoint: `/crops/toggle-crop-status/:id`",
+    "section": "3.4 Toggle Crop Status (Soft Delete/Restore)",
+    "endpoint": "/crops/toggle-crop-status/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 366,
+    "type": "P",
+    "text": "Endpoint: `/crops/update-crop-images/:id`",
+    "section": "3.5 Update Crop Images (Image Manager)",
+    "endpoint": "/crops/update-crop-images/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 411,
+    "type": "P",
+    "text": "Endpoint: `/crop-category`",
+    "section": "4.1 Create Crop Category",
+    "endpoint": "/crop-category",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 442,
+    "type": "P",
+    "text": "Endpoint: `/crop-category`",
+    "section": "4.2 Get All Crop Categories",
+    "endpoint": "/crop-category",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 479,
+    "type": "P",
+    "text": "Endpoint: `/crop-category/:id`",
+    "section": "4.3 Get Crop Category by ID",
+    "endpoint": "/crop-category/:id",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 507,
+    "type": "P",
+    "text": "Endpoint: `/crop-category/:id`",
+    "section": "4.4 Update Crop Category",
+    "endpoint": "/crop-category/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 527,
+    "type": "P",
+    "text": "Endpoint: `/crop-category/toggle-delete/:id`",
+    "section": "4.5 Toggle Delete Crop Category",
+    "endpoint": "/crop-category/toggle-delete/:id",
+    "method": "PATCH"
+  },
+  {
+    "page": 2,
+    "line": 545,
+    "type": "P",
+    "text": "Endpoint: `/crops_details/create-crop-detail`",
+    "section": "5.1 Create Crop Details",
+    "endpoint": "/crops_details/create-crop-detail",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 575,
+    "type": "P",
+    "text": "Endpoint: `/crops_details/getAll-crop-detail`",
+    "section": "5.2 Get All Crop Details",
+    "endpoint": "/crops_details/getAll-crop-detail",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 599,
+    "type": "P",
+    "text": "Endpoint: `/crops_details/update-crop-details/:id`",
+    "section": "5.3 Update Crop Details",
+    "endpoint": "/crops_details/update-crop-details/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 619,
+    "type": "P",
+    "text": "Endpoint: `/crops_details/update-crop-detail-images/:id`",
+    "section": "5.4 Update Crop Detail Images",
+    "endpoint": "/crops_details/update-crop-detail-images/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 639,
+    "type": "P",
+    "text": "Endpoint: `/crops_details/toggle-crop-detail-status/:id`",
+    "section": "5.5 Toggle Crop Detail Status",
+    "endpoint": "/crops_details/toggle-crop-detail-status/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 653,
+    "type": "P",
+    "text": "Endpoint: `/crop-disease`",
+    "section": "6.1 Create Disease Record",
+    "endpoint": "/crop-disease",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 673,
+    "type": "P",
+    "text": "Endpoint: `/crop-disease`",
+    "section": "6.2 Get All Diseases",
+    "endpoint": "/crop-disease",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 729,
+    "type": "P",
+    "text": "Endpoint: `/crop-disease/:id`",
+    "section": "6.3 Get Disease by ID",
+    "endpoint": "/crop-disease/:id",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 775,
+    "type": "P",
+    "text": "Endpoint: `/crop-disease/:id`",
+    "section": "6.4 Update Disease",
+    "endpoint": "/crop-disease/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 797,
+    "type": "P",
+    "text": "Endpoint: `/crop-disease/:id`",
+    "section": "6.5 Delete Disease Record",
+    "endpoint": "/crop-disease/:id",
+    "method": "DELETE"
+  },
+  {
+    "page": 2,
+    "line": 812,
+    "type": "P",
+    "text": "Endpoint: `/crops_guid_heading/heading`",
+    "section": "7.1 Create Guideline Heading",
+    "endpoint": "/crops_guid_heading/heading",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 839,
+    "type": "P",
+    "text": "Endpoint: `/crops_guid_heading/heading`",
+    "section": "7.2 Get All Guideline Headings",
+    "endpoint": "/crops_guid_heading/heading",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 872,
+    "type": "P",
+    "text": "Endpoint: `/crops_guid_heading/heading/:id`",
+    "section": "7.3 Get Single Guideline Heading",
+    "endpoint": "/crops_guid_heading/heading/:id",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 896,
+    "type": "P",
+    "text": "Endpoint: `/crops_guid_heading/heading/:id`",
+    "section": "7.4 Update Guideline Heading",
+    "endpoint": "/crops_guid_heading/heading/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 922,
+    "type": "P",
+    "text": "Endpoint: `/crops_guid_heading/heading/delete/:id`",
+    "section": "7.5 Delete Guideline Heading",
+    "endpoint": "/crops_guid_heading/heading/delete/:id",
+    "method": "PATCH"
+  },
+  {
+    "page": 2,
+    "line": 939,
+    "type": "P",
+    "text": "Endpoint: `/crops_guid_heading/heading/restore/:id`",
+    "section": "7.6 Restore Guideline Heading",
+    "endpoint": "/crops_guid_heading/heading/restore/:id",
+    "method": "PATCH"
+  },
+  {
+    "page": 2,
+    "line": 958,
+    "type": "P",
+    "text": "Endpoint: `/crop_guid_details/detail`",
+    "section": "8.1 Create Guideline Detail",
+    "endpoint": "/crop_guid_details/detail",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 993,
+    "type": "P",
+    "text": "Endpoint: `/crop_guid_details/detail`",
+    "section": "8.2 Get All Guideline Details",
+    "endpoint": "/crop_guid_details/detail",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1052,
+    "type": "P",
+    "text": "Endpoint: `/crop_guid_details/detail/:id`",
+    "section": "8.3 Get Single Crop Guideline Details (by crop_id)",
+    "endpoint": "/crop_guid_details/detail/:id",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1102,
+    "type": "P",
+    "text": "Endpoint: `/crop_guid_details/detail/:id`",
+    "section": "8.4 Update Guideline Detail",
+    "endpoint": "/crop_guid_details/detail/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 1127,
+    "type": "P",
+    "text": "Endpoint: `/crop_guid_details/detail/:id/media`",
+    "section": "8.5 Add Media to Guideline Detail",
+    "endpoint": "/crop_guid_details/detail/:id/media",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 1146,
+    "type": "P",
+    "text": "Endpoint: `/crop_guid_details/detail/media/:detailId/:index`",
+    "section": "8.6 Delete Media from Guideline Detail",
+    "endpoint": "/crop_guid_details/detail/media/:detailId/:index",
+    "method": "DELETE"
+  },
+  {
+    "page": 2,
+    "line": 1164,
+    "type": "P",
+    "text": "Endpoint: `/crop_guid_details/detail/delete/:id`",
+    "section": "8.7 Soft Delete Guideline Detail",
+    "endpoint": "/crop_guid_details/detail/delete/:id",
+    "method": "PATCH"
+  },
+  {
+    "page": 2,
+    "line": 1178,
+    "type": "P",
+    "text": "Endpoint: `/queries`",
+    "section": "9.1 Create Query",
+    "endpoint": "/queries",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 1200,
+    "type": "P",
+    "text": "Endpoint: `/queries/my-queries`",
+    "section": "9.2 Get My Queries",
+    "endpoint": "/queries/my-queries",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1231,
+    "type": "P",
+    "text": "Endpoint: `/queries/:id`",
+    "section": "9.3 Delete My Query",
+    "endpoint": "/queries/:id",
+    "method": "DELETE"
+  },
+  {
+    "page": 2,
+    "line": 1244,
+    "type": "P",
+    "text": "Endpoint: `/queries/public`",
+    "section": "9.4 Get Public Queries Feed",
+    "endpoint": "/queries/public",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1274,
+    "type": "P",
+    "text": "Endpoint: `/queries/staff/pending`",
+    "section": "9.5 Get Pending Queries (For Staff)",
+    "endpoint": "/queries/staff/pending",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1296,
+    "type": "P",
+    "text": "Endpoint: `/queries/staff/my-replies`",
+    "section": "9.6 Get Staff My Replies",
+    "endpoint": "/queries/staff/my-replies",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1318,
+    "type": "P",
+    "text": "Endpoint: `/queries/:id/reply`",
+    "section": "9.7 Submit Query Reply",
+    "endpoint": "/queries/:id/reply",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 1340,
+    "type": "P",
+    "text": "Endpoint: `/queries/admin/all`",
+    "section": "9.8 Admin: Get All Queries with Filters",
+    "endpoint": "/queries/admin/all",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1368,
+    "type": "P",
+    "text": "Endpoint: `/queries/admin/activity/:userId`",
+    "section": "9.9 Admin: Get User/Staff Activity",
+    "endpoint": "/queries/admin/activity/:userId",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1395,
+    "type": "P",
+    "text": "Endpoint: `/queries/admin/:id/detail`",
+    "section": "9.10 Admin: Get Query Complete Detail",
+    "endpoint": "/queries/admin/:id/detail",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1427,
+    "type": "P",
+    "text": "Endpoint: `/queries/:id`",
+    "section": "9.11 Get Query by ID",
+    "endpoint": "/queries/:id",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1445,
+    "type": "P",
+    "text": "Endpoint: `/vendor/register`",
+    "section": "10.1 Register Vendor Profile",
+    "endpoint": "/vendor/register",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 1479,
+    "type": "P",
+    "text": "Endpoint: `/vendor/profile`",
+    "section": "10.2 Get Vendor Profile",
+    "endpoint": "/vendor/profile",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1496,
+    "type": "P",
+    "text": "Endpoint: `/vendor/all`",
+    "section": "10.3 Get All Vendors",
+    "endpoint": "/vendor/all",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1514,
+    "type": "P",
+    "text": "Endpoint: `/vendor/service-providers`",
+    "section": "10.4 Get Service Providers (Hire Out Services)",
+    "endpoint": "/vendor/service-providers",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1533,
+    "type": "P",
+    "text": "Endpoint: `/vendor/status/:id`",
+    "section": "10.5 Update Vendor Status",
+    "endpoint": "/vendor/status/:id",
+    "method": "PATCH"
+  },
+  {
+    "page": 2,
+    "line": 1549,
+    "type": "P",
+    "text": "Endpoint: `/product-categories`",
+    "section": "11.1 Create Product Category",
+    "endpoint": "/product-categories",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 1571,
+    "type": "P",
+    "text": "Endpoint: `/product-categories`",
+    "section": "11.2 Get Product Categories",
+    "endpoint": "/product-categories",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1590,
+    "type": "P",
+    "text": "Endpoint: `/product-categories/:id`",
+    "section": "11.3 Update Product Category",
+    "endpoint": "/product-categories/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 1611,
+    "type": "P",
+    "text": "Endpoint: `/product-categories/toggle-delete/:id`",
+    "section": "11.4 Toggle Delete Product Category",
+    "endpoint": "/product-categories/toggle-delete/:id",
+    "method": "PATCH"
+  },
+  {
+    "page": 2,
+    "line": 1625,
+    "type": "P",
+    "text": "Endpoint: `/product-categories/subcategory`",
+    "section": "11.5 Create Product Sub-category",
+    "endpoint": "/product-categories/subcategory",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 1649,
+    "type": "P",
+    "text": "Endpoint: `/product-categories/subcategory`",
+    "section": "11.6 Get Product Subcategories",
+    "endpoint": "/product-categories/subcategory",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1669,
+    "type": "P",
+    "text": "Endpoint: `/product-categories/subcategory/:id`",
+    "section": "11.7 Update Product Subcategory",
+    "endpoint": "/product-categories/subcategory/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 1691,
+    "type": "P",
+    "text": "Endpoint: `/product-categories/subcategory/toggle-delete/:id`",
+    "section": "11.8 Toggle Delete Product Subcategory",
+    "endpoint": "/product-categories/subcategory/toggle-delete/:id",
+    "method": "PATCH"
+  },
+  {
+    "page": 2,
+    "line": 1706,
+    "type": "P",
+    "text": "Endpoint: `/vendor-categories`",
+    "section": "12.1 Create Vendor Category",
+    "endpoint": "/vendor-categories",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 1727,
+    "type": "P",
+    "text": "Endpoint: `/vendor-categories`",
+    "section": "12.2 Get Vendor Categories",
+    "endpoint": "/vendor-categories",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1746,
+    "type": "P",
+    "text": "Endpoint: `/vendor-categories/:id`",
+    "section": "12.3 Update Vendor Category",
+    "endpoint": "/vendor-categories/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 1767,
+    "type": "P",
+    "text": "Endpoint: `/vendor-categories/toggle-delete/:id`",
+    "section": "12.4 Toggle Delete Vendor Category",
+    "endpoint": "/vendor-categories/toggle-delete/:id",
+    "method": "PATCH"
+  },
+  {
+    "page": 2,
+    "line": 1781,
+    "type": "P",
+    "text": "Endpoint: `/products/create`",
+    "section": "13.1 Create Product",
+    "endpoint": "/products/create",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 1809,
+    "type": "P",
+    "text": "Endpoint: `/products/all`",
+    "section": "13.2 Get All Products",
+    "endpoint": "/products/all",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1833,
+    "type": "P",
+    "text": "Endpoint: `/products/update/:id`",
+    "section": "13.3 Update Product",
+    "endpoint": "/products/update/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 1850,
+    "type": "P",
+    "text": "Endpoint: `/products/delete/:id`",
+    "section": "13.4 Delete Product",
+    "endpoint": "/products/delete/:id",
+    "method": "DELETE"
+  },
+  {
+    "page": 2,
+    "line": 1864,
+    "type": "P",
+    "text": "Endpoint: `/addresses`",
+    "section": "14.1 Create Address",
+    "endpoint": "/addresses",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 1888,
+    "type": "P",
+    "text": "Endpoint: `/addresses`",
+    "section": "14.2 Get My Addresses",
+    "endpoint": "/addresses",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 1906,
+    "type": "P",
+    "text": "Endpoint: `/addresses/:id`",
+    "section": "14.3 Update Address",
+    "endpoint": "/addresses/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 1926,
+    "type": "P",
+    "text": "Endpoint: `/addresses/:id`",
+    "section": "14.4 Delete Address",
+    "endpoint": "/addresses/:id",
+    "method": "DELETE"
+  },
+  {
+    "page": 2,
+    "line": 1940,
+    "type": "P",
+    "text": "Endpoint: `/orders/checkout`",
+    "section": "15.1 Create Order / Checkout",
+    "endpoint": "/orders/checkout",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 1961,
+    "type": "P",
+    "text": "Endpoint: `/orders/verify`",
+    "section": "15.2 Verify Online Payment",
+    "endpoint": "/orders/verify",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 1978,
+    "type": "P",
+    "text": "Endpoint: `/orders/history`",
+    "section": "15.3 Get Order History",
+    "endpoint": "/orders/history",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 2002,
+    "type": "P",
+    "text": "Endpoint: `/orders/my-orders`",
+    "section": "15.4 Get My Orders",
+    "endpoint": "/orders/my-orders",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 2025,
+    "type": "P",
+    "text": "Endpoint: `/orders/sales-report`",
+    "section": "15.5 Get Sales Report",
+    "endpoint": "/orders/sales-report",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 2054,
+    "type": "P",
+    "text": "Endpoint: `/orders/status/:id`",
+    "section": "15.6 Update Order Status",
+    "endpoint": "/orders/status/:id",
+    "method": "PATCH"
+  },
+  {
+    "page": 2,
+    "line": 2070,
+    "type": "P",
+    "text": "Endpoint: `/brokerage/lead`",
+    "section": "16.1 Create Lead Request",
+    "endpoint": "/brokerage/lead",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 2084,
+    "type": "P",
+    "text": "Endpoint: `/brokerage/leads`",
+    "section": "16.2 Get Lead Requests",
+    "endpoint": "/brokerage/leads",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 2105,
+    "type": "P",
+    "text": "Endpoint: `/brokerage/deal`",
+    "section": "16.3 Register Brokerage Deal",
+    "endpoint": "/brokerage/deal",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 2124,
+    "type": "P",
+    "text": "Endpoint: `/brokerage/deals`",
+    "section": "16.4 Get Brokerage Deals",
+    "endpoint": "/brokerage/deals",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 2156,
+    "type": "P",
+    "text": "Endpoint: `/crops_guid_parent/parent`",
+    "section": "17.1 Create Guideline Parent",
+    "endpoint": "/crops_guid_parent/parent",
+    "method": "POST"
+  },
+  {
+    "page": 2,
+    "line": 2163,
+    "type": "P",
+    "text": "Endpoint: `/crops_guid_parent/parent`",
+    "section": "17.2 Get All Guideline Parents",
+    "endpoint": "/crops_guid_parent/parent",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 2167,
+    "type": "P",
+    "text": "Endpoint: `/crops_guid_parent/parent/:id`",
+    "section": "17.3 Get Single Guideline Parent",
+    "endpoint": "/crops_guid_parent/parent/:id",
+    "method": "GET"
+  },
+  {
+    "page": 2,
+    "line": 2171,
+    "type": "P",
+    "text": "Endpoint: `/crops_guid_parent/parent/:id`",
+    "section": "17.4 Update Guideline Parent",
+    "endpoint": "/crops_guid_parent/parent/:id",
+    "method": "PUT"
+  },
+  {
+    "page": 2,
+    "line": 2178,
+    "type": "P",
+    "text": "Endpoint: `/crops_guid_parent/parent/delete/:id`",
+    "section": "17.5 Delete Guideline Parent",
+    "endpoint": "/crops_guid_parent/parent/delete/:id",
+    "method": "PATCH"
+  }
+]
