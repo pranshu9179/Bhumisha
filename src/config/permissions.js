@@ -24,6 +24,7 @@ export const rolePermissions = {
   ],
   [ROLES.EMPLOYEE]: [
     'monitoring:view',
+    'products:manage',
     'reports:view',
     'tasks:manage',
     'vendor-support:manage',

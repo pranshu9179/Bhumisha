@@ -21,6 +21,7 @@ const map = {
   in_follow_up: 'default',
   watching: 'default',
   pending_review: 'warning',
+  unapproved: 'warning',
   escalated: 'danger',
   critical: 'danger',
   deleted: 'danger',

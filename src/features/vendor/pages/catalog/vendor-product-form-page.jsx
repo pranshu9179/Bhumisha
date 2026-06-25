@@ -15,8 +15,27 @@ import { useCurrentUser } from '@/hooks/use-current-user'
 import { useProductCategories, useProductSubcategories, useShopProductDetail, useShopProductSaveMutation } from '@/services/api/hooks'
 import { vendorProductSchema } from '@/features/vendor/pages/catalog/vendor-product-schema'
 
+function productBasePath(role) {
+  if (role === 'admin') return '/admin/product-list'
+  if (role === 'employee') return '/employee/products'
+  return '/vendor/products'
+}
+
+function numberOrUndefined(value) {
+  if (value === '' || value === undefined || value === null) return undefined
+  const numericValue = Number(value)
+  return Number.isNaN(numericValue) ? undefined : numericValue
+}
+
+function retainedImages(product) {
+  return product?.retained_images || product?.images || []
+}
+
 export function VendorProductFormPage() {
   const user = useCurrentUser()
+  const role = user?.role || 'vendor'
+  const basePath = productBasePath(role)
+  const canApprove = role === 'admin' || role === 'employee'
   const navigate = useNavigate()
   const { id } = useParams()
   const { data: categories = [] } = useProductCategories()
@@ -44,6 +63,7 @@ export function VendorProductFormPage() {
       image: undefined,
       tags: '',
       status: 'draft',
+      is_approved: 'false',
     },
   })
   const selectedImages = useWatch({ control, name: 'image' })
@@ -58,6 +78,7 @@ export function VendorProductFormPage() {
         // product_type: product.product_type || product.productType || 'organic',
         tags: Array.isArray(product.tags) ? product.tags.join(', ') : product.tags || '',
         image: undefined,
+        is_approved: product.is_approved ? 'true' : 'false',
       })
     }
   }, [id, product, reset])
@@ -79,17 +100,15 @@ export function VendorProductFormPage() {
         stock: values.stock,
         image: values.image,
         tags: JSON.stringify(tags),
-        retained_images: id ? product?.retained_images || product?.images || [] : undefined,
-        category_id: values.category_id ? Number(values.category_id) : undefined,
-        sub_category_id: values.sub_category_id ? Number(values.sub_category_id) : undefined,
+        retained_images: id ? retainedImages(product) : undefined,
+        category_id: numberOrUndefined(values.category_id),
+        sub_category_id: numberOrUndefined(values.sub_category_id),
+        is_approved: canApprove ? values.is_approved === 'true' || (!id && canApprove) : undefined,
         // product_type: values.product_type,
-        status: values.status || 'published',
-        vendorId: user.id,
-        vendor_id: user.id,
       },
     })
     toast.success(id ? 'Product updated successfully.' : 'Product created successfully.')
-    navigate('/vendor/products')
+    navigate(basePath)
   }
 
   return (
@@ -97,7 +116,7 @@ export function VendorProductFormPage() {
       <PageHeader
         eyebrow="Catalog editor"
         title={id ? 'Edit product' : 'Add product'}
-        description="Create or refine product listings using the documented product fields."
+        description={canApprove ? 'Create approved products or update approval state for marketplace listings.' : 'Create or refine your listings. Vendor edits are sent back for admin approval.'}
         compact
       />
       <Card className="max-w-5xl">
@@ -117,7 +136,7 @@ export function VendorProductFormPage() {
                 <Input type="number" {...register('vendor_price')} />
               </Field>
               <Field label="SELLING PRICE (INR)" error={errors.price?.message}>
-                <Input type="number" placeholder="Set by Admin" readOnly {...register('price')} />
+                <Input type="number" placeholder={canApprove ? 'Selling price' : 'Set by Admin'} readOnly={!canApprove} {...register('price')} />
               </Field>
             </div>
             <Field label="STOCK" error={errors.stock?.message} className="md:col-span-2">
@@ -151,6 +170,20 @@ export function VendorProductFormPage() {
                 />
               </div>
             ) : null}
+            {id && retainedImages(product).length > 1 ? (
+              <div className="grid gap-3 md:col-span-2 sm:grid-cols-2 lg:grid-cols-4">
+                {retainedImages(product).map((image, index) => (
+                  <PreviewableImage
+                    key={`${product.id}-image-${index}`}
+                    src={image}
+                    alt={`${product.name || 'Product'} image ${index + 1}`}
+                    className="h-28 w-full rounded-lg object-cover"
+                    fallbackClassName="h-28 w-full rounded-lg"
+                    previewTitle={`${product.name || 'Product'} image ${index + 1}`}
+                  />
+                ))}
+              </div>
+            ) : null}
             <Field label="PRODUCT CATEGORY *" error={errors.category_id?.message} className="md:col-span-2">
               <NativeSelect {...register('category_id')}>
                 <option value="">Select an option</option>
@@ -174,6 +207,14 @@ export function VendorProductFormPage() {
             <Field label="SEARCH TAGS (COMMA SEPARATED)" hint="Comma-separated tags, e.g. seeds, organic, wheat" error={errors.tags?.message} className="md:col-span-2">
               <Input {...register('tags')} />
             </Field>
+            {canApprove ? (
+              <Field label="APPROVAL" error={errors.is_approved?.message} className="md:col-span-2">
+                <NativeSelect {...register('is_approved')}>
+                  <option value="true">Approved</option>
+                  <option value="false">Pending review</option>
+                </NativeSelect>
+              </Field>
+            ) : null}
             {/* <Field label="Status" error={errors.status?.message}>
               <NativeSelect {...register('status')}>
                 <option value="draft">Draft</option>
@@ -182,7 +223,7 @@ export function VendorProductFormPage() {
               </NativeSelect>
             </Field> */}
             <div className="flex justify-end gap-3 md:col-span-2">
-              <Button type="button" variant="secondary" onClick={() => navigate('/vendor/products')}>
+              <Button type="button" variant="secondary" onClick={() => navigate(basePath)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={mutation.isPending} className="w-full">

@@ -27,4 +27,5 @@ export const vendorProductSchema = z.object({
     }, 'Each image must be 5MB or smaller.'),
   tags: z.string().min(1, 'At least one product tag is required'),
   status: z.string().optional(),
+  is_approved: z.union([z.literal('true'), z.literal('false'), z.boolean()]).optional(),
 })

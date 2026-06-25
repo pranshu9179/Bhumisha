@@ -543,6 +543,19 @@ function normalizeShopProduct(record) {
   const visibleSource = { ...source };
   delete visibleSource.sku;
   delete visibleSource.product_code;
+  const rawStatus = String(firstPresent(source.status, source.product_status, "")).toLowerCase();
+  const hasApprovalValue =
+    firstPresent(source.is_approved, source.isApproved, source.approved) !== undefined;
+  const isApproved = hasApprovalValue
+    ? toBooleanFlag(firstPresent(source.is_approved, source.isApproved, source.approved))
+    : ["approved", "published", "active"].includes(rawStatus);
+  const status = rawStatus === "deleted"
+    ? "deleted"
+    : firstPresent(
+        hasApprovalValue ? (isApproved ? "approved" : "pending_review") : undefined,
+        rawStatus,
+        "published",
+      );
   return {
     ...visibleSource,
     id: firstPresent(source.id, source.product_id, source.productId, source._id),
@@ -563,13 +576,19 @@ function normalizeShopProduct(record) {
     category_id: firstPresent(source.category_id, source.categoryId),
     categoryId: firstPresent(source.categoryId, source.category_id),
     categoryName: firstPresent(source.categoryName, source.category_name, source.category?.name, source.category?.english?.name),
+    category_name: firstPresent(source.category_name, source.categoryName, source.category?.name, source.category?.english?.name),
     sub_category_id: firstPresent(source.sub_category_id, source.subCategoryId),
     subCategoryId: firstPresent(source.subCategoryId, source.sub_category_id),
     subCategoryName: firstPresent(source.subCategoryName, source.sub_category_name, source.subcategory?.name, source.subcategory?.english?.name),
+    sub_category_name: firstPresent(source.sub_category_name, source.subCategoryName, source.subcategory?.name, source.subcategory?.english?.name),
     product_type: firstPresent(source.product_type, source.productType, source.type),
     productType: firstPresent(source.productType, source.product_type, source.type),
-    status: String(firstPresent(source.status, source.product_status, "published")).toLowerCase(),
+    is_approved: isApproved,
+    isApproved,
+    approvalStatus: isApproved ? "approved" : "pending_review",
+    status,
     company_name: firstPresent(source.company_name, source.companyName, source.vendor_name),
+    companyName: firstPresent(source.companyName, source.company_name, source.vendor_name),
     createdAt: firstPresent(source.createdAt, source.created_at),
     updatedAt: firstPresent(source.updatedAt, source.updated_at),
   };
@@ -1199,6 +1218,9 @@ function shopProductFormData(payload = {}) {
       ? JSON.stringify(payload.retained_images)
       : payload.retained_images,
   };
+  delete normalizedPayload.status;
+  delete normalizedPayload.vendorId;
+  delete normalizedPayload.vendor_id;
   return toFormData(normalizedPayload, ["image"]);
 }
 

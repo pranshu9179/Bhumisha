@@ -81,7 +81,7 @@ export const navigationByRole = {
         },
         {
           title: "Product List",
-          description: "Marketplace products searchable by query tags.",
+          description: "Create, approve, and update marketplace products.",
           path: "/admin/product-list",
           icon: PackagePlus,
         },
@@ -188,6 +188,18 @@ export const navigationByRole = {
           description: "Delayed query detection and control tower.",
           path: "/employee/monitoring",
           icon: ClipboardList,
+        },
+        {
+          title: "Products",
+          description: "Create, review, and update marketplace products.",
+          path: "/employee/products",
+          icon: Boxes,
+        },
+        {
+          title: "Add Product",
+          description: "Create an auto-approved product listing.",
+          path: "/employee/products/new",
+          icon: PackagePlus,
         },
       ],
     },
@@ -300,6 +312,16 @@ export const utilityRoutes = [
     title: "Edit Product",
     path: "/vendor/products/:id/edit",
     description: "Update product content, price, and stock strategy.",
+  },
+  {
+    title: "Edit Admin Product",
+    path: "/admin/product-list/:id/edit",
+    description: "Update product content, price, stock, and approval.",
+  },
+  {
+    title: "Edit Employee Product",
+    path: "/employee/products/:id/edit",
+    description: "Update product content, price, stock, and approval.",
   },
 ];
 

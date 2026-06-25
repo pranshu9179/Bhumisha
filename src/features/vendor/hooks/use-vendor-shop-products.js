@@ -8,7 +8,7 @@ function addIdentifier(values, value) {
   }
 }
 
-function vendorIdentifiers(user, vendorProfile) {
+export function vendorIdentifiers(user, vendorProfile) {
   const values = new Set()
   addIdentifier(values, user?.id)
   addIdentifier(values, user?.user_id)
@@ -21,7 +21,7 @@ function vendorIdentifiers(user, vendorProfile) {
   return values
 }
 
-function productVendorIdentifiers(product) {
+export function productVendorIdentifiers(product) {
   const values = new Set()
   addIdentifier(values, product?.vendorId)
   addIdentifier(values, product?.vendor_id)
@@ -33,7 +33,7 @@ function productVendorIdentifiers(product) {
   return values
 }
 
-function belongsToVendor(product, identifiers) {
+export function belongsToVendor(product, identifiers) {
   if (!identifiers.size) return false
   for (const value of productVendorIdentifiers(product)) {
     if (identifiers.has(value)) return true

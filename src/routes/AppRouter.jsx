@@ -22,7 +22,7 @@ const EmployeesPage = lazy(() => import('@/features/admin/pages/people-pages').t
 const VendorsPage = lazy(() => import('@/features/admin/pages/people-pages').then((module) => ({ default: module.VendorsPage })))
 const AdminQueryManagementPage = lazy(() => import('@/features/admin/pages/query-management-page'))
 const AdminProductsPage = lazy(() => import('@/features/admin/pages/catalog/admin-products-page'))
-const AdminProductListPage = lazy(() => import('@/features/expert/pages/support-pages').then((module) => ({ default: module.ExpertProductsPage })))
+const ProductManagementPage = lazy(() => import('@/features/vendor/pages/catalog/vendor-products-page'))
 const CategoriesPage = lazy(() => import('@/features/admin/pages/catalog/categories-page'))
 const GuideHeadingsPage = lazy(() => import('@/features/admin/pages/catalog/guide-headings-page'))
 const GuideDetailsPage = lazy(() => import('@/features/admin/pages/catalog/guide-details-page'))
@@ -113,7 +113,9 @@ export function AppRouter() {
           <Route path="queries" element={<AdminQueryManagementPage />} />
           <Route path="queries/:id" element={<ExpertQueryDetailPage />} />
           <Route path="products" element={<AdminProductsPage />} />
-          <Route path="product-list" element={<AdminProductListPage />} />
+          <Route path="product-list" element={<ProductManagementPage />} />
+          <Route path="product-list/new" element={<VendorProductFormPage />} />
+          <Route path="product-list/:id/edit" element={<VendorProductFormPage />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="guide-headings" element={<GuideHeadingsPage />} />
           <Route path="guide-details" element={<GuideDetailsPage />} />
@@ -151,6 +153,9 @@ export function AppRouter() {
         >
           <Route index element={<EmployeeDashboardPage />} />
           <Route path="monitoring" element={<EmployeeMonitoringPage />} />
+          <Route path="products" element={<ProductManagementPage />} />
+          <Route path="products/new" element={<VendorProductFormPage />} />
+          <Route path="products/:id/edit" element={<VendorProductFormPage />} />
           <Route path="queries/:id" element={<ExpertQueryDetailPage />} />
         </Route>
 
