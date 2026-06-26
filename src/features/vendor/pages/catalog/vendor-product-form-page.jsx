@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { PreviewableImage } from '@/components/media/previewable-image'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { useCurrentUser } from '@/hooks/use-current-user'
-import { useProductCategories, useProductSubcategories, useShopProductDetail, useShopProductSaveMutation } from '@/services/api/hooks'
+import { useProductCategories, useProductSubcategories, useProducts, useShopProductDetail, useShopProductSaveMutation } from '@/services/api/hooks'
 import { vendorProductSchema } from '@/features/vendor/pages/catalog/vendor-product-schema'
 
 function productBasePath(role) {
@@ -40,6 +40,7 @@ export function VendorProductFormPage() {
   const { id } = useParams()
   const { data: categories = [] } = useProductCategories()
   const { data: subcategories = [] } = useProductSubcategories()
+  const { data: crops = [] } = useProducts({ page: 1, limit: 100, status: 'false' })
   const { data: product } = useShopProductDetail(id)
   const mutation = useShopProductSaveMutation()
   const {
@@ -52,9 +53,12 @@ export function VendorProductFormPage() {
     resolver: zodResolver(vendorProductSchema),
     defaultValues: {
       name: '',
+      name_hi: '',
       description: '',
+      description_hi: '',
       category_id: '',
       sub_category_id: '',
+      crop_id: '',
       // product_type: 'organic',
       price: '',
       mrp: 0,
@@ -75,6 +79,7 @@ export function VendorProductFormPage() {
         ...product,
         category_id: product.category_id || product.categoryId || '',
         sub_category_id: product.sub_category_id || product.subCategoryId || '',
+        crop_id: product.crop_id || product.cropId || '',
         // product_type: product.product_type || product.productType || 'organic',
         tags: Array.isArray(product.tags) ? product.tags.join(', ') : product.tags || '',
         image: undefined,
@@ -93,7 +98,9 @@ export function VendorProductFormPage() {
       id,
       payload: {
         name: values.name,
+        name_hi: values.name_hi?.trim() || undefined,
         description: values.description,
+        description_hi: values.description_hi?.trim() || undefined,
         price: values.price === '' ? undefined : values.price,
         mrp: values.mrp,
         vendor_price: values.vendor_price,
@@ -103,6 +110,7 @@ export function VendorProductFormPage() {
         retained_images: id ? retainedImages(product) : undefined,
         category_id: numberOrUndefined(values.category_id),
         sub_category_id: numberOrUndefined(values.sub_category_id),
+        crop_id: numberOrUndefined(values.crop_id),
         is_approved: canApprove ? values.is_approved === 'true' || (!id && canApprove) : undefined,
         // product_type: values.product_type,
       },
@@ -125,8 +133,14 @@ export function VendorProductFormPage() {
             <Field label="PRODUCT NAME" error={errors.name?.message} className="md:col-span-2">
               <Input {...register('name')} />
             </Field>
+            <Field label="HINDI PRODUCT NAME" error={errors.name_hi?.message} className="md:col-span-2">
+              <Input lang="hi" dir="auto" {...register('name_hi')} />
+            </Field>
             <Field label="DESCRIPTION" error={errors.description?.message} className="md:col-span-2">
               <Textarea rows={4} {...register('description')} />
+            </Field>
+            <Field label="HINDI DESCRIPTION" error={errors.description_hi?.message} className="md:col-span-2">
+              <Textarea rows={4} lang="hi" dir="auto" {...register('description_hi')} />
             </Field>
             <div className="grid gap-4 md:col-span-2 md:grid-cols-3">
               <Field label="MRP (INR) *" error={errors.mrp?.message}>
@@ -200,6 +214,17 @@ export function VendorProductFormPage() {
                 {subcategories.map((subcategory) => (
                   <option key={subcategory.id} value={subcategory.id}>
                     {subcategory.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label="RELATED CROP" error={errors.crop_id?.message} className="md:col-span-2">
+              <NativeSelect {...register('crop_id')}>
+                <option value="">No crop mapping</option>
+                {crops.map((crop) => (
+                  <option key={crop.id} value={crop.id}>
+                    {crop.name}
+                    {crop.name_hi ? ` / ${crop.name_hi}` : ''}
                   </option>
                 ))}
               </NativeSelect>

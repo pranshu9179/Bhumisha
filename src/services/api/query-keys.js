@@ -36,6 +36,7 @@ export const queryKeys = {
   salesReport: (params = {}) => ['orders', 'sales-report', params],
   returnRequests: (params = {}) => ['orders', 'returns', params],
   addresses: ['addresses'],
+  serviceBookings: (params = {}) => ['service-bookings', params],
   brokerageLeads: ['brokerage', 'leads'],
   brokerageDeals: ['brokerage', 'deals'],
   mandiRates: (params = {}) => ['mandi', params],

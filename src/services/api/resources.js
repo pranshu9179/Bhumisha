@@ -1,6 +1,6 @@
 import { API_BASE_URL, apiClient } from "@/services/api/client";
 
-function unwrapList(response, keys = ["data", "categories", "subcategories", "vendorCategories", "productCategories", "cropCategories", "users", "cropDetails", "cropDiseases", "diseases"]) {
+function unwrapList(response, keys = ["data", "categories", "subcategories", "vendorCategories", "productCategories", "cropCategories", "users", "cropDetails", "cropDiseases", "diseases", "bookings", "serviceBookings", "service_bookings"]) {
   if (Array.isArray(response)) return response;
   for (const key of keys) {
     if (Array.isArray(response?.[key])) return response[key];
@@ -28,6 +28,16 @@ function unwrapPagination(response) {
 function unwrapRecord(response) {
   if (response?.data && !Array.isArray(response.data)) return response.data;
   return response;
+}
+
+function unwrapUserRecord(response) {
+  return (
+    response?.user ||
+    response?.data?.user ||
+    response?.profile ||
+    response?.data?.profile ||
+    unwrapRecord(response)
+  );
 }
 
 function localized(record, locale = "english") {
@@ -562,7 +572,9 @@ function normalizeShopProduct(record) {
     vendorId: firstPresent(source.vendor_id, source.vendorId),
     vendor_id: firstPresent(source.vendor_id, source.vendorId),
     name: firstPresent(source.name, source.product_name, source.title),
+    name_hi: firstPresent(source.name_hi, source.hindi_name, source.name_hindi),
     description: firstPresent(source.description, source.product_description, ""),
+    description_hi: firstPresent(source.description_hi, source.hindi_description, source.description_hindi),
     price: Number(firstPresent(source.price, source.amount, 0)),
     mrp: Number(firstPresent(source.mrp, source.maximum_retail_price, source.price, 0)),
     vendor_price: Number(firstPresent(source.vendor_price, source.vendorPrice, source.price, 0)),
@@ -581,6 +593,10 @@ function normalizeShopProduct(record) {
     subCategoryId: firstPresent(source.subCategoryId, source.sub_category_id),
     subCategoryName: firstPresent(source.subCategoryName, source.sub_category_name, source.subcategory?.name, source.subcategory?.english?.name),
     sub_category_name: firstPresent(source.sub_category_name, source.subCategoryName, source.subcategory?.name, source.subcategory?.english?.name),
+    crop_id: firstPresent(source.crop_id, source.cropId),
+    cropId: firstPresent(source.cropId, source.crop_id),
+    crop_name: firstPresent(source.crop_name, source.cropName, source.crop?.name, source.crop?.english?.name),
+    cropName: firstPresent(source.cropName, source.crop_name, source.crop?.name, source.crop?.english?.name),
     product_type: firstPresent(source.product_type, source.productType, source.type),
     productType: firstPresent(source.productType, source.product_type, source.type),
     is_approved: isApproved,
@@ -654,19 +670,66 @@ function checkoutPayload(payload = {}) {
 function normalizeOrder(record) {
   const unwrapped = unwrapRecord(record) || {};
   const source = unwrapped.order || unwrapped;
+  const product = firstPresent(source.product, source.shopProduct, source.shop_product, source.item?.product) || {};
+  const vendor = firstPresent(
+    source.vendor,
+    source.vendorProfile,
+    source.vendor_profile,
+    product.vendor,
+    product.vendorProfile,
+    product.vendor_profile,
+  ) || {};
   const id = firstPresent(source.id, source.order_id, source.orderId);
+  const productId = firstPresent(source.productId, source.product_id, product.id, product.product_id, product.productId);
   const total = Number(firstPresent(source.total, source.total_amount, source.totalAmount, 0));
   const orderStatus = String(firstPresent(source.orderStatus, source.order_status, source.fulfillmentStatus, source.fulfillment_status, source.status, "Pending"));
+  const vendorId = firstPresent(
+    source.vendorId,
+    source.vendor_id,
+    vendor.id,
+    vendor.vendorId,
+    vendor.vendor_id,
+    product.vendorId,
+    product.vendor_id,
+  );
+  const vendorName = firstPresent(
+    source.vendorName,
+    source.vendor_name,
+    source.company_name,
+    vendor.company_name,
+    vendor.companyName,
+    vendor.full_name,
+    vendor.fullName,
+    vendor.name,
+    vendor.username,
+    product.company_name,
+    product.companyName,
+    product.vendor_name,
+    product.vendorName,
+    typeof vendor === "string" ? vendor : undefined,
+  );
+  const productName = firstPresent(
+    source.productName,
+    source.product_name,
+    product.name,
+    product.product_name,
+    product.title,
+    typeof product === "string" ? product : undefined,
+  );
   return {
     ...source,
     id,
     order_id: id,
-    vendorId: firstPresent(source.vendorId, source.vendor_id),
-    vendor_id: firstPresent(source.vendor_id, source.vendorId),
+    productId,
+    product_id: productId,
+    vendorId,
+    vendor_id: vendorId,
+    vendorName,
+    vendor_name: vendorName,
     customerName: firstPresent(source.customerName, source.customer_name, source.name, source.username, "Customer"),
     customer_name: firstPresent(source.customer_name, source.customerName, source.name, source.username, "Customer"),
-    productName: firstPresent(source.productName, source.product_name),
-    product_name: firstPresent(source.product_name, source.productName),
+    productName,
+    product_name: productName,
     quantity: Number(firstPresent(source.quantity, 0)),
     price: Number(firstPresent(source.price, source.unit_price, 0)),
     total,
@@ -888,6 +951,53 @@ function normalizeBrokerageLead(record) {
   };
 }
 
+function normalizeServiceBooking(record) {
+  const source = unwrapRecord(record) || {};
+  const id = firstPresent(source.id, source.service_booking_id, source.serviceBookingId, source.booking_id);
+  const userName = firstPresent(source.user_name, source.userName, source.customer_name, source.customerName, source.user?.name, source.user?.username);
+  const vendorName = firstPresent(
+    source.vendor_name,
+    source.vendorName,
+    source.company_name,
+    source.vendor?.company_name,
+    source.vendor?.companyName,
+    source.vendor?.full_name,
+    source.vendor?.fullName,
+    source.vendor?.name,
+    source.vendor?.username,
+  );
+  const categoryName = firstPresent(source.category_name, source.categoryName, source.category?.name);
+
+  return {
+    ...source,
+    id,
+    serviceBookingId: id,
+    service_booking_id: id,
+    userId: firstPresent(source.userId, source.user_id, source.user?.id),
+    user_id: firstPresent(source.user_id, source.userId, source.user?.id),
+    vendorId: firstPresent(source.vendorId, source.vendor_id, source.vendor?.id),
+    vendor_id: firstPresent(source.vendor_id, source.vendorId, source.vendor?.id),
+    categoryId: firstPresent(source.categoryId, source.category_id, source.category?.id),
+    category_id: firstPresent(source.category_id, source.categoryId, source.category?.id),
+    name: firstPresent(source.name, source.customer_name, source.customerName, userName),
+    phone_number: firstPresent(source.phone_number, source.phoneNumber, source.phone, source.mobile_number),
+    phoneNumber: firstPresent(source.phoneNumber, source.phone_number, source.phone, source.mobile_number),
+    remark: firstPresent(source.remark, source.notes, ""),
+    notes: firstPresent(source.notes, source.remark, ""),
+    status: String(firstPresent(source.status, "Pending")),
+    userName,
+    user_name: userName,
+    vendorName,
+    vendor_name: vendorName,
+    categoryName,
+    category_name: categoryName,
+    createdAt: firstPresent(source.createdAt, source.created_at),
+    created_at: firstPresent(source.created_at, source.createdAt),
+    updatedAt: firstPresent(source.updatedAt, source.updated_at),
+    updated_at: firstPresent(source.updated_at, source.updatedAt),
+  };
+}
+
 function normalizeBrokerageDeal(record) {
   const source = unwrapRecord(record) || {};
   return {
@@ -895,14 +1005,25 @@ function normalizeBrokerageDeal(record) {
     id: firstPresent(source.id, source.deal_id),
     leadRequestId: firstPresent(source.leadRequestId, source.lead_request_id),
     lead_request_id: firstPresent(source.lead_request_id, source.leadRequestId),
+    serviceBookingId: firstPresent(source.serviceBookingId, source.service_booking_id),
+    service_booking_id: firstPresent(source.service_booking_id, source.serviceBookingId),
     vendorId: firstPresent(source.vendorId, source.vendor_id),
     vendor_id: firstPresent(source.vendor_id, source.vendorId),
     userId: firstPresent(source.userId, source.user_id),
     user_id: firstPresent(source.user_id, source.userId),
+    vendorName: firstPresent(source.vendorName, source.vendor_name),
+    vendor_name: firstPresent(source.vendor_name, source.vendorName),
+    userName: firstPresent(source.userName, source.user_name, source.customerName, source.customer_name),
+    user_name: firstPresent(source.user_name, source.userName, source.customer_name, source.customerName),
+    customerName: firstPresent(source.customerName, source.customer_name, source.userName, source.user_name),
+    customer_name: firstPresent(source.customer_name, source.customerName, source.user_name, source.userName),
+    category_name: firstPresent(source.category_name, source.categoryName),
+    categoryName: firstPresent(source.categoryName, source.category_name),
     dealAmount: Number(firstPresent(source.dealAmount, source.deal_amount, 0)),
     deal_amount: Number(firstPresent(source.deal_amount, source.dealAmount, 0)),
     commissionAmount: Number(firstPresent(source.commissionAmount, source.commission_amount, 0)),
     commission_amount: Number(firstPresent(source.commission_amount, source.commissionAmount, 0)),
+    notes: source.notes || "",
     status: String(firstPresent(source.status, "logged")).toLowerCase(),
     createdAt: firstPresent(source.createdAt, source.created_at),
   };
@@ -1704,6 +1825,43 @@ export const addressesApi = {
   remove: async (id) => (await apiClient.delete(`/addresses/${id}`)).data,
 };
 
+export const serviceBookingsApi = {
+  create: async (payload) =>
+    unwrapRecord(
+      (
+        await apiClient.post(
+          "/service-bookings/create",
+          {
+            vendor_id: payload.vendor_id ?? payload.vendorId,
+            category_id: payload.category_id ?? payload.categoryId,
+            name: payload.name,
+            phone_number: payload.phone_number ?? payload.phoneNumber,
+            remark: payload.remark ?? payload.notes ?? "",
+          },
+          jsonConfig(),
+        )
+      ).data,
+    ),
+  all: async (params = {}) =>
+    listAllPages(
+      async (pageParams) => (await apiClient.get("/service-bookings/all", { params: pageParams })).data,
+      params,
+      normalizeServiceBooking,
+    ),
+  updateStatus: async (id, status) =>
+    normalizeServiceBooking(
+      unwrapRecord(
+        (
+          await apiClient.put(
+            `/service-bookings/${id}/status`,
+            { status },
+            jsonConfig(),
+          )
+        ).data,
+      ),
+    ),
+};
+
 export const usersApi = {
   list: async (params = {}) => {
     const requestParams = {
@@ -1723,6 +1881,10 @@ export const usersApi = {
   me: async () =>
     normalizeUser(
       unwrapRecord((await apiClient.get("/users/me")).data),
+    ),
+  updateProfile: async (payload) =>
+    normalizeUser(
+      unwrapUserRecord((await apiClient.put("/users/update-profile", payload, jsonConfig())).data),
     ),
   updateRole: async (id, role) =>
     (await apiClient.patch(`/users/role/${id}`, { role: toApiRole(role) }, jsonConfig())).data,

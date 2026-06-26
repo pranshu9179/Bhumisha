@@ -9,20 +9,48 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { RecordDetailsDialog } from '@/features/shared/components/record-details-dialog'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { useOrderUpdateMutation, useOrders, usePaymentStatusMutation, useReturnHandleMutation, useReturnRequests, useSalesReport, useUsers } from '@/services/api/hooks'
+import { useOrderUpdateMutation, useOrders, usePaymentStatusMutation, useReturnHandleMutation, useReturnRequests, useSalesReport, useServiceBookingStatusMutation, useServiceBookings, useShopProducts, useVendors } from '@/services/api/hooks'
 
 const ORDER_STATUS_OPTIONS = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled']
 const PAYMENT_STATUS_OPTIONS = ['Pending', 'Paid', 'Failed']
+const SERVICE_BOOKING_STATUS_OPTIONS = ['Pending', 'Completed', 'Cancelled']
 
 function selectedStatus(options, value) {
   const normalized = String(value || '').toLowerCase()
   return options.find((option) => option.toLowerCase() === normalized) || options[0]
 }
 
+function vendorLabel(vendor) {
+  return vendor?.company_name || vendor?.companyName || vendor?.full_name || vendor?.fullName || vendor?.name || vendor?.username || vendor?.id
+}
+
+function orderVendorName(order, vendorMap) {
+  return order.vendorName || order.vendor_name || vendorMap[order.vendorId] || vendorMap[order.vendor_id]
+}
+
+function productVendorLabel(product, vendorMap) {
+  return (
+    product?.vendorName ||
+    product?.vendor_name ||
+    product?.company_name ||
+    product?.companyName ||
+    vendorMap[product?.vendorId] ||
+    vendorMap[product?.vendor_id] ||
+    vendorMap[product?.userId] ||
+    vendorMap[product?.user_id]
+  )
+}
+
+function orderProductVendorName(order, productVendorMap) {
+  return productVendorMap[order.productId] || productVendorMap[order.product_id] || productVendorMap[order.productName] || productVendorMap[order.product_name]
+}
+
 export function OrdersPage() {
   const { data: orders = [] } = useOrders()
   const { data: returnRequests = [] } = useReturnRequests()
-  const { data: vendors = [] } = useUsers({ role: 'vendor' })
+  const { data: serviceBookings = [] } = useServiceBookings({ page: 1, limit: 100 })
+  const { data: vendors = [] } = useVendors()
+  const { data: products = [] } = useShopProducts({ limit: 100 })
   const [salesFilters, setSalesFilters] = useState({
     vendorId: '',
     month: '',
@@ -40,12 +68,33 @@ export function OrdersPage() {
   const statusMutation = useOrderUpdateMutation()
   const paymentMutation = usePaymentStatusMutation()
   const returnMutation = useReturnHandleMutation()
-  const vendorMap = useMemo(() => Object.fromEntries(vendors.map((item) => [item.id, item.name])), [vendors])
+  const serviceBookingStatusMutation = useServiceBookingStatusMutation()
+  const vendorMap = useMemo(
+    () =>
+      Object.fromEntries(
+        vendors
+          .flatMap((vendor) => [vendor.id, vendor.vendor_id, vendor.vendorId, vendor.userId, vendor.user_id].filter(Boolean).map((id) => [id, vendorLabel(vendor)])),
+      ),
+    [vendors],
+  )
+  const productVendorMap = useMemo(
+    () =>
+      Object.fromEntries(
+        products.flatMap((product) => {
+          const label = productVendorLabel(product, vendorMap)
+          if (!label) return []
+          return [product.id, product.product_id, product.productId, product.name, product.product_name]
+            .filter(Boolean)
+            .map((id) => [id, label])
+        }),
+      ),
+    [products, vendorMap],
+  )
 
   const columns = useMemo(
     () => [
       { header: 'Order ID', accessorKey: 'id' },
-      { header: 'Vendor', accessorKey: 'vendorId', cell: ({ row }) => vendorMap[row.original.vendorId] || '-' },
+      { header: 'Vendor', accessorKey: 'vendorName', cell: ({ row }) => orderVendorName(row.original, vendorMap) || orderProductVendorName(row.original, productVendorMap) || '-' },
       { header: 'Customer', accessorKey: 'customerName' },
       { header: 'Product', accessorKey: 'productName', cell: ({ row }) => row.original.productName || row.original.product_name || '-' },
       { header: 'Qty', accessorKey: 'quantity' },
@@ -102,7 +151,7 @@ export function OrdersPage() {
         ),
       },
     ],
-    [paymentMutation, statusMutation, vendorMap],
+    [paymentMutation, productVendorMap, statusMutation, vendorMap],
   )
 
   const returnColumns = useMemo(
@@ -155,6 +204,50 @@ export function OrdersPage() {
     ],
     [returnMutation],
   )
+  const serviceBookingColumns = useMemo(
+    () => [
+      { header: 'Booking', accessorKey: 'id' },
+      { header: 'Farmer', accessorKey: 'name', cell: ({ row }) => row.original.name || row.original.user_name || '-' },
+      { header: 'Phone', accessorKey: 'phone_number', cell: ({ row }) => row.original.phone_number || row.original.phoneNumber || '-' },
+      { header: 'Vendor', accessorKey: 'vendor_name', cell: ({ row }) => row.original.vendor_name || row.original.vendorName || vendorMap[row.original.vendor_id] || '-' },
+      { header: 'Category', accessorKey: 'category_name', cell: ({ row }) => row.original.category_name || row.original.categoryName || '-' },
+      { header: 'Remark', accessorKey: 'remark', cell: ({ row }) => row.original.remark || '-' },
+      { header: 'Status', accessorKey: 'status', cell: ({ row }) => <StatusBadge value={row.original.status} /> },
+      { header: 'Created', accessorKey: 'createdAt', cell: ({ row }) => formatDate(row.original.createdAt || row.original.created_at, 'DD MMM') },
+      {
+        header: 'Actions',
+        id: 'actions',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <RecordDetailsDialog
+              title={`Service booking ${row.original.id}`}
+              description="Service booking request, vendor, user, and status details."
+              record={row.original}
+            />
+            <NativeSelect
+              className="h-9 w-36"
+              value={selectedStatus(SERVICE_BOOKING_STATUS_OPTIONS, row.original.status)}
+              disabled={serviceBookingStatusMutation.isPending}
+              onClick={(event) => event.stopPropagation()}
+              onChange={(event) =>
+                serviceBookingStatusMutation
+                  .mutateAsync({ id: row.original.id, status: event.target.value })
+                  .then(() => toast.success(`Service booking marked ${event.target.value}.`))
+              }
+            >
+              {SERVICE_BOOKING_STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+        ),
+      },
+    ],
+    [serviceBookingStatusMutation, vendorMap],
+  )
   const salesRows = salesReport.rows || salesReport.data || []
   const salesColumns = useMemo(
     () => [
@@ -182,6 +275,7 @@ export function OrdersPage() {
         <TabsList>
           <TabsTrigger value="orders">Orders ({orders.length})</TabsTrigger>
           <TabsTrigger value="returns">Returns ({returnRequests.length})</TabsTrigger>
+          <TabsTrigger value="service-bookings">Service bookings ({serviceBookings.length})</TabsTrigger>
           <TabsTrigger value="sales">Sales report</TabsTrigger>
         </TabsList>
         <TabsContent value="orders">
@@ -189,6 +283,9 @@ export function OrdersPage() {
         </TabsContent>
         <TabsContent value="returns">
           <DataTable columns={returnColumns} data={returnRequests} searchPlaceholder="Search return requests" />
+        </TabsContent>
+        <TabsContent value="service-bookings">
+          <DataTable columns={serviceBookingColumns} data={serviceBookings} searchPlaceholder="Search service bookings" />
         </TabsContent>
         <TabsContent value="sales" className="space-y-4">
           <div className="grid gap-3 rounded-xl border border-white/70 bg-white/80 p-4 md:grid-cols-[1fr_160px_160px_auto]">
@@ -199,7 +296,7 @@ export function OrdersPage() {
               <option value="">All vendors</option>
               {vendors.map((vendor) => (
                 <option key={vendor.id} value={vendor.id}>
-                  {vendor.name || vendor.company_name || vendor.username || vendor.id}
+                  {vendorLabel(vendor)}
                 </option>
               ))}
             </NativeSelect>

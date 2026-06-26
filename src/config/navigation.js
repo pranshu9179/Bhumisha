@@ -190,6 +190,12 @@ export const navigationByRole = {
           icon: ClipboardList,
         },
         {
+          title: "Service Bookings",
+          description: "Review service requests and update status.",
+          path: "/employee/service-bookings",
+          icon: Handshake,
+        },
+        {
           title: "Products",
           description: "Create, review, and update marketplace products.",
           path: "/employee/products",
@@ -280,6 +286,12 @@ export const navigationByRole = {
           description: "Register your vendor profile and start selling.",
           path: "/user/become-vendor",
           icon: Store,
+        },
+        {
+          title: "Service Booking",
+          description: "Request farming services from available vendors.",
+          path: "/user/service-bookings",
+          icon: Handshake,
         },
         {
           title: "Checkout",

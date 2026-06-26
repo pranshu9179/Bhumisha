@@ -2,9 +2,12 @@ import { z } from 'zod'
 
 export const vendorProductSchema = z.object({
   name: z.string().min(2, 'Product name is required'),
+  name_hi: z.string().optional(),
   description: z.string().optional(),
+  description_hi: z.string().optional(),
   category_id: z.string().min(1, 'Product category is required'),
   sub_category_id: z.string().optional(),
+  crop_id: z.string().optional(),
   product_type: z.string().optional(),
   price: z.union([z.literal(''), z.coerce.number().min(0)]).optional(),
   mrp: z.coerce.number().min(1, 'MRP must be greater than zero'),

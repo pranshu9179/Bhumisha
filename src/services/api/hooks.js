@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { addressesApi, brokerageApi, authApi, categoriesApi, cropDiseaseApi, guideDetailsApi, guideHeadingsApi, guideParentsApi, mandiApi, ordersApi, productCategoriesApi, productsApi, queriesApi, returnRequestsApi, settlementsApi, shopProductsApi, usersApi, vendorApi, vendorCategoriesApi } from '@/services/api/resources'
+import { addressesApi, brokerageApi, authApi, categoriesApi, cropDiseaseApi, guideDetailsApi, guideHeadingsApi, guideParentsApi, mandiApi, ordersApi, productCategoriesApi, productsApi, queriesApi, returnRequestsApi, serviceBookingsApi, settlementsApi, shopProductsApi, usersApi, vendorApi, vendorCategoriesApi } from '@/services/api/resources'
 import { queryKeys } from '@/services/api/query-keys'
 
 export function useUsers(params = {}) {
@@ -251,6 +251,13 @@ export function useAddresses() {
   })
 }
 
+export function useServiceBookings(params = {}) {
+  return useQuery({
+    queryKey: queryKeys.serviceBookings(params),
+    queryFn: () => serviceBookingsApi.all(params),
+  })
+}
+
 export function useBrokerageLeads() {
   return useQuery({
     queryKey: queryKeys.brokerageLeads,
@@ -349,6 +356,13 @@ export function useResendOtpMutation() {
 export function useProfileImageMutation() {
   return useInvalidatingMutation(
     authApi.updateProfileImage,
+    [['users']],
+  )
+}
+
+export function useUserProfileUpdateMutation() {
+  return useInvalidatingMutation(
+    usersApi.updateProfile,
     [['users']],
   )
 }
@@ -537,7 +551,21 @@ export function useBrokerageLeadSaveMutation() {
 export function useBrokerageDealSaveMutation() {
   return useInvalidatingMutation(
     brokerageApi.createDeal,
-    [['brokerage', 'leads'], ['brokerage', 'deals']],
+    [['brokerage', 'leads'], ['brokerage', 'deals'], ['service-bookings']],
+  )
+}
+
+export function useServiceBookingCreateMutation() {
+  return useInvalidatingMutation(
+    serviceBookingsApi.create,
+    [['service-bookings']],
+  )
+}
+
+export function useServiceBookingStatusMutation() {
+  return useInvalidatingMutation(
+    ({ id, status }) => serviceBookingsApi.updateStatus(id, status),
+    [['service-bookings'], ['brokerage', 'deals']],
   )
 }
 

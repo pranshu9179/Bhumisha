@@ -14,7 +14,7 @@ import { NativeSelect } from '@/components/ui/native-select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { RecordDetailsDialog } from '@/features/shared/components/record-details-dialog'
-import { useBrokerageDealSaveMutation, useBrokerageDeals, useBrokerageLeadSaveMutation, useBrokerageLeads, useUsers, useVendors } from '@/services/api/hooks'
+import { useBrokerageDealSaveMutation, useBrokerageDeals, useBrokerageLeadSaveMutation, useBrokerageLeads, useServiceBookings, useUsers, useVendors } from '@/services/api/hooks'
 
 const leadSchema = z.object({
   categoryName: z.string().min(2, 'Category is required'),
@@ -23,11 +23,15 @@ const leadSchema = z.object({
 
 const dealSchema = z.object({
   leadRequestId: z.string().optional(),
+  serviceBookingId: z.string().optional(),
   vendorId: z.string().min(1, 'Vendor is required'),
   userId: z.string().min(1, 'User is required'),
   dealAmount: z.coerce.number().min(1, 'Deal amount is required'),
   commissionAmount: z.coerce.number().min(0, 'Commission cannot be negative'),
   notes: z.string().optional(),
+}).refine((values) => !(values.leadRequestId && values.serviceBookingId), {
+  message: 'Use either a lead request or a service booking.',
+  path: ['serviceBookingId'],
 })
 
 function apiId(value) {
@@ -37,6 +41,7 @@ function apiId(value) {
 
 export function BrokeragePage() {
   const { data: leads = [] } = useBrokerageLeads()
+  const { data: serviceBookings = [] } = useServiceBookings({ page: 1, limit: 100 })
   const { data: deals = [] } = useBrokerageDeals()
   const { data: vendors = [] } = useVendors()
   const { data: users = [] } = useUsers({ role: 'user' })
@@ -53,6 +58,7 @@ export function BrokeragePage() {
     resolver: zodResolver(dealSchema),
     defaultValues: {
       leadRequestId: '',
+      serviceBookingId: '',
       vendorId: '',
       userId: '',
       dealAmount: 0,
@@ -88,6 +94,7 @@ export function BrokeragePage() {
               onClick={(event) => {
                 event.stopPropagation()
                 dealForm.setValue('leadRequestId', row.original.id)
+                dealForm.setValue('serviceBookingId', '')
                 dealForm.setValue('userId', row.original.userId || '')
               }}
             >
@@ -103,6 +110,11 @@ export function BrokeragePage() {
   const dealColumns = useMemo(
     () => [
       { header: 'Deal', accessorKey: 'id' },
+      {
+        header: 'Source',
+        accessorKey: 'source',
+        cell: ({ row }) => row.original.serviceBookingId ? `Booking ${row.original.serviceBookingId}` : row.original.leadRequestId ? `Lead ${row.original.leadRequestId}` : '-',
+      },
       { header: 'Category', accessorKey: 'category_name', cell: ({ row }) => row.original.category_name || '-' },
       { header: 'Vendor', accessorKey: 'vendor_name', cell: ({ row }) => row.original.vendor_name || row.original.vendorName || '-' },
       { header: 'Customer', accessorKey: 'customer_name', cell: ({ row }) => row.original.customer_name || row.original.customerName || '-' },
@@ -124,6 +136,45 @@ export function BrokeragePage() {
     [],
   )
 
+  const serviceBookingColumns = useMemo(
+    () => [
+      { header: 'Booking', accessorKey: 'id' },
+      { header: 'Category', accessorKey: 'category_name', cell: ({ row }) => row.original.category_name || row.original.categoryName || '-' },
+      { header: 'Farmer', accessorKey: 'name', cell: ({ row }) => row.original.name || row.original.user_name || '-' },
+      { header: 'Phone', accessorKey: 'phone_number', cell: ({ row }) => row.original.phone_number || row.original.phoneNumber || '-' },
+      { header: 'Vendor', accessorKey: 'vendor_name', cell: ({ row }) => row.original.vendor_name || row.original.vendorName || '-' },
+      { header: 'Status', accessorKey: 'status', cell: ({ row }) => <StatusBadge value={row.original.status} /> },
+      {
+        header: 'Actions',
+        id: 'actions',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <RecordDetailsDialog
+              title={`Service booking ${row.original.id}`}
+              description="Service booking details available for brokerage deal logging."
+              record={row.original}
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={(event) => {
+                event.stopPropagation()
+                dealForm.setValue('serviceBookingId', row.original.id)
+                dealForm.setValue('leadRequestId', '')
+                dealForm.setValue('vendorId', row.original.vendorId || row.original.vendor_id || '')
+                dealForm.setValue('userId', row.original.userId || row.original.user_id || '')
+              }}
+            >
+              Use booking
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [dealForm],
+  )
+
   const createLead = async (values) => {
     await leadMutation.mutateAsync({
       categoryName: values.categoryName,
@@ -136,6 +187,7 @@ export function BrokeragePage() {
   const createDeal = async (values) => {
     await dealMutation.mutateAsync({
       leadRequestId: values.leadRequestId ? apiId(values.leadRequestId) : undefined,
+      serviceBookingId: values.serviceBookingId ? apiId(values.serviceBookingId) : undefined,
       vendorId: apiId(values.vendorId),
       userId: apiId(values.userId),
       dealAmount: values.dealAmount,
@@ -194,6 +246,9 @@ export function BrokeragePage() {
               <Field label="Lead request ID">
                 <Input {...dealForm.register('leadRequestId')} />
               </Field>
+              <Field label="Service booking ID" error={dealForm.formState.errors.serviceBookingId?.message}>
+                <Input {...dealForm.register('serviceBookingId')} />
+              </Field>
               <Field label="Vendor" error={dealForm.formState.errors.vendorId?.message}>
                 <NativeSelect {...dealForm.register('vendorId')}>
                   <option value="">Select vendor</option>
@@ -236,10 +291,14 @@ export function BrokeragePage() {
       <Tabs defaultValue="leads" className="space-y-4">
         <TabsList>
           <TabsTrigger value="leads">Leads ({leads.length})</TabsTrigger>
+          <TabsTrigger value="service-bookings">Service bookings ({serviceBookings.length})</TabsTrigger>
           <TabsTrigger value="deals">Deals ({deals.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="leads">
           <DataTable columns={leadColumns} data={leads} searchPlaceholder="Search brokerage leads" />
+        </TabsContent>
+        <TabsContent value="service-bookings">
+          <DataTable columns={serviceBookingColumns} data={serviceBookings} searchPlaceholder="Search service bookings" />
         </TabsContent>
         <TabsContent value="deals">
           <DataTable columns={dealColumns} data={deals} searchPlaceholder="Search brokerage deals" />

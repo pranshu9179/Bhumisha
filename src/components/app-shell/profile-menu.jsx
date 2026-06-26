@@ -98,13 +98,20 @@
 
 
 import { useRef, useState } from 'react'
-import { LogOut, Camera } from 'lucide-react'
+import { Camera, LogOut, UserRoundPen } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { PreviewableImage } from '@/components/media/previewable-image'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { buttonVariants } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -113,9 +120,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { UserProfileForm } from '@/features/shared/components/user-profile-form'
 import { cn } from '@/lib/utils'
 import { useLogoutMutation, useProfileImageMutation } from '@/services/api/hooks'
-import { logout } from '@/store/auth-slice'
+import { logout, setSession } from '@/store/auth-slice'
 
 function initials(name) {
   return name
@@ -130,12 +138,13 @@ export function ProfileMenu() {
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
 
-  const { user } = useSelector((state) => state.auth)
+  const { session, user } = useSelector((state) => state.auth)
 
   const logoutMutation = useLogoutMutation()
   const profileImageMutation = useProfileImageMutation()
 
   const [localPreview, setLocalPreview] = useState('')
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false)
 
   const imageSrc = localPreview || user?.avatar || user?.profile_image
   const hasImage = Boolean(user?.avatar || user?.profile_image || localPreview)
@@ -181,8 +190,6 @@ export function ProfileMenu() {
       profile_image: file,
     })
 
-    console.log('PROFILE UPDATE RESPONSE', result)
-
     const newImage =
       result?.user?.profile_image ||
       result?.data?.user?.profile_image ||
@@ -196,10 +203,7 @@ export function ProfileMenu() {
         profile_image: newImage,
       }
 
-      localStorage.setItem(
-        'auth-user',
-        JSON.stringify(updatedUser),
-      )
+      dispatch(setSession({ ...(session || {}), user: updatedUser }))
     }
 
     toast.success('Profile image updated.')
@@ -303,6 +307,16 @@ export function ProfileMenu() {
 
         <DropdownMenuSeparator />
 
+        <DropdownMenuItem
+          onSelect={(event) => {
+            event.preventDefault()
+            setProfileDialogOpen(true)
+          }}
+        >
+          <UserRoundPen className="h-4 w-4" />
+          Edit profile
+        </DropdownMenuItem>
+
         <DropdownMenuItem onClick={handleLogout} disabled={logoutMutation.isPending}>
           <LogOut className="h-4 w-4" />
           {logoutMutation.isPending ? 'Signing out...' : 'Sign out'}
@@ -316,6 +330,18 @@ export function ProfileMenu() {
         className="hidden"
         onChange={handleImageChange}
       />
+
+      <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit profile</DialogTitle>
+            <DialogDescription>
+              Update your account and land details.
+            </DialogDescription>
+          </DialogHeader>
+          <UserProfileForm user={user} onSuccess={() => setProfileDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </DropdownMenu>
   )
 }

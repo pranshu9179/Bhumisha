@@ -42,9 +42,11 @@ const ExpertProductsPage = lazy(() => import('@/features/expert/pages/support-pa
 
 const EmployeeDashboardPage = lazy(() => import('@/features/employee/pages/dashboard-page'))
 const EmployeeMonitoringPage = lazy(() => import('@/features/employee/pages/monitoring-page'))
+const EmployeeServiceBookingsPage = lazy(() => import('@/features/employee/pages/service-bookings-page'))
 
 const UserDashboardPage = lazy(() => import('@/features/user/pages/dashboard-page'))
 const BecomeVendorPage = lazy(() => import('@/features/user/pages/become-vendor-page'))
+const ServiceBookingsPage = lazy(() => import('@/features/user/pages/service-bookings-page'))
 
 const VendorDashboardPage = lazy(() => import('@/features/vendor/pages/dashboard-page'))
 const VendorProductsPage = lazy(() => import('@/features/vendor/pages/catalog/vendor-products-page'))
@@ -153,6 +155,7 @@ export function AppRouter() {
         >
           <Route index element={<EmployeeDashboardPage />} />
           <Route path="monitoring" element={<EmployeeMonitoringPage />} />
+          <Route path="service-bookings" element={<EmployeeServiceBookingsPage />} />
           <Route path="products" element={<ProductManagementPage />} />
           <Route path="products/new" element={<VendorProductFormPage />} />
           <Route path="products/:id/edit" element={<VendorProductFormPage />} />
@@ -169,6 +172,7 @@ export function AppRouter() {
         >
           <Route index element={<UserDashboardPage />} />
           <Route path="checkout" element={<VendorCheckoutPage />} />
+          <Route path="service-bookings" element={<ServiceBookingsPage />} />
           <Route path="become-vendor" element={<BecomeVendorPage />} />
         </Route>
 
