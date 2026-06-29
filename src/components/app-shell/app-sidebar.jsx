@@ -35,7 +35,7 @@ export function AppSidebar({ role }) {
             {sidebarOpen ? (
               <div className="min-w-0">
                 <p className="truncate text-lg font-semibold">{APP_NAME}</p>
-                <p className="text-xs uppercase tracking-[0.18em] text-emerald-50/65">Smart agriculture cloud</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-emerald-50/65"></p>
               </div>
             ) : null}
           </div>

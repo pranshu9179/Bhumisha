@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -31,6 +31,11 @@ function retainedImages(product) {
   return product?.retained_images || product?.images || []
 }
 
+function validRouteId(value) {
+  if (!value || value === 'undefined' || value === 'null') return undefined
+  return value
+}
+
 export function VendorProductFormPage() {
   const user = useCurrentUser()
   const role = user?.role || 'vendor'
@@ -38,16 +43,18 @@ export function VendorProductFormPage() {
   const canApprove = role === 'admin' || role === 'employee'
   const navigate = useNavigate()
   const { id } = useParams()
+  const productId = validRouteId(id)
   const { data: categories = [] } = useProductCategories()
   const { data: subcategories = [] } = useProductSubcategories()
   const { data: crops = [] } = useProducts({ page: 1, limit: 100, status: 'false' })
-  const { data: product } = useShopProductDetail(id)
+  const { data: product } = useShopProductDetail(productId)
   const mutation = useShopProductSaveMutation()
   const {
     register,
     handleSubmit,
     reset,
     control,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(vendorProductSchema),
@@ -71,10 +78,26 @@ export function VendorProductFormPage() {
     },
   })
   const selectedImages = useWatch({ control, name: 'image' })
+  const selectedCategoryId = useWatch({ control, name: 'category_id' })
   const selectedImageCount = selectedImages?.length || 0
+  const previousCategoryIdRef = useRef('')
+  const activeSubcategories = useMemo(
+    () => subcategories.filter((subcategory) => subcategory.status !== 'deleted'),
+    [subcategories],
+  )
+  const filteredSubcategories = useMemo(
+    () =>
+      selectedCategoryId
+        ? activeSubcategories.filter(
+            (subcategory) =>
+              String(subcategory.category_id || subcategory.categoryId || '') === String(selectedCategoryId),
+          )
+        : [],
+    [activeSubcategories, selectedCategoryId],
+  )
 
   useEffect(() => {
-    if (product && id) {
+    if (product && productId) {
       reset({
         ...product,
         category_id: product.category_id || product.categoryId || '',
@@ -86,16 +109,35 @@ export function VendorProductFormPage() {
         is_approved: product.is_approved ? 'true' : 'false',
       })
     }
-  }, [id, product, reset])
+  }, [productId, product, reset])
+
+  useEffect(() => {
+    const currentCategoryId = selectedCategoryId || ''
+
+    if (!previousCategoryIdRef.current) {
+      previousCategoryIdRef.current = currentCategoryId
+      return
+    }
+
+    if (currentCategoryId !== previousCategoryIdRef.current) {
+      setValue('sub_category_id', '')
+      previousCategoryIdRef.current = currentCategoryId
+    }
+  }, [selectedCategoryId, setValue])
 
   const onSubmit = async (values) => {
+    if (id && !productId) {
+      toast.error('Product id is missing. Please go back to the product list and open the product again.')
+      return
+    }
+
     const tags = values.tags
       .split(',')
       .map((tag) => tag.trim())
       .filter(Boolean)
 
     await mutation.mutateAsync({
-      id,
+      id: productId,
       payload: {
         name: values.name,
         name_hi: values.name_hi?.trim() || undefined,
@@ -107,7 +149,7 @@ export function VendorProductFormPage() {
         stock: values.stock,
         image: values.image,
         tags: JSON.stringify(tags),
-        retained_images: id ? retainedImages(product) : undefined,
+        retained_images: productId ? retainedImages(product) : undefined,
         category_id: numberOrUndefined(values.category_id),
         sub_category_id: numberOrUndefined(values.sub_category_id),
         crop_id: numberOrUndefined(values.crop_id),
@@ -115,7 +157,7 @@ export function VendorProductFormPage() {
         // product_type: values.product_type,
       },
     })
-    toast.success(id ? 'Product updated successfully.' : 'Product created successfully.')
+    toast.success(productId ? 'Product updated successfully.' : 'Product created successfully.')
     navigate(basePath)
   }
 
@@ -123,7 +165,7 @@ export function VendorProductFormPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Catalog editor"
-        title={id ? 'Edit product' : 'Add product'}
+        title={productId ? 'Edit product' : 'Add product'}
         description={canApprove ? 'Create approved products or update approval state for marketplace listings.' : 'Create or refine your listings. Vendor edits are sent back for admin approval.'}
         compact
       />
@@ -172,7 +214,7 @@ export function VendorProductFormPage() {
                 <Input type="file" accept="image/jpeg,image/png,image/jpg,image/webp" multiple {...register('image')} />
               </div>
             </Field>
-            {id && (product?.image_url || product?.image) ? (
+            {productId && (product?.image_url || product?.image) ? (
               <div className="md:col-span-2">
                 <p className="mb-2 text-sm font-medium text-slate-500">Current image</p>
                 <PreviewableImage
@@ -184,7 +226,7 @@ export function VendorProductFormPage() {
                 />
               </div>
             ) : null}
-            {id && retainedImages(product).length > 1 ? (
+            {productId && retainedImages(product).length > 1 ? (
               <div className="grid gap-3 md:col-span-2 sm:grid-cols-2 lg:grid-cols-4">
                 {retainedImages(product).map((image, index) => (
                   <PreviewableImage
@@ -209,9 +251,9 @@ export function VendorProductFormPage() {
               </NativeSelect>
             </Field>
             <Field label="SUBCATEGORY" error={errors.sub_category_id?.message} className="md:col-span-2">
-              <NativeSelect {...register('sub_category_id')}>
-                <option value="">Select subcategory</option>
-                {subcategories.map((subcategory) => (
+              <NativeSelect {...register('sub_category_id')} disabled={!selectedCategoryId}>
+                <option value="">{selectedCategoryId ? 'Select subcategory' : 'Select product category first'}</option>
+                {filteredSubcategories.map((subcategory) => (
                   <option key={subcategory.id} value={subcategory.id}>
                     {subcategory.name}
                   </option>
@@ -252,7 +294,7 @@ export function VendorProductFormPage() {
                 Cancel
               </Button>
               <Button type="submit" disabled={mutation.isPending} className="w-full">
-                {mutation.isPending ? 'Saving...' : id ? 'Save Product Listing' : 'Save Product Listing'}
+                {mutation.isPending ? 'Saving...' : productId ? 'Save Product Listing' : 'Save Product Listing'}
               </Button>
             </div>
           </form>

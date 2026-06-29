@@ -1,4 +1,4 @@
-export const APP_NAME = 'Bhumisha Nexus'
+export const APP_NAME = 'BhooMitra'
 
 export const ROLES = {
   ADMIN: 'admin',

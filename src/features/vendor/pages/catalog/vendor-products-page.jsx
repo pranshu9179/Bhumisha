@@ -1,5 +1,5 @@
-import { CheckCircle2, Edit2, Plus } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { Edit2, Plus } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { DataTable } from '@/components/data-table/data-table'
@@ -13,7 +13,7 @@ import { RecordDetailsDialog } from '@/features/shared/components/record-details
 import { belongsToVendor, vendorIdentifiers } from '@/features/vendor/hooks/use-vendor-shop-products'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { formatCurrency } from '@/lib/format'
-import { useShopProductDeleteMutation, useShopProducts, useShopProductSaveMutation, useVendorProfile } from '@/services/api/hooks'
+import { useShopProductDeleteMutation, useShopProducts, useVendorProfile } from '@/services/api/hooks'
 
 function productBasePath(role) {
   if (role === 'admin') return '/admin/product-list'
@@ -25,10 +25,8 @@ function productImage(product) {
   return product.image_url || product.image || product.images?.[0]
 }
 
-function numberOrUndefined(value) {
-  if (value === '' || value === undefined || value === null) return undefined
-  const numericValue = Number(value)
-  return Number.isNaN(numericValue) ? undefined : numericValue
+function productId(product) {
+  return product?.id || product?.product_id || product?.productId || product?._id || product?.english?.id || product?.english?.product_id
 }
 
 export function VendorProductsPage() {
@@ -39,18 +37,20 @@ export function VendorProductsPage() {
   const canCreate = ['admin', 'employee', 'vendor'].includes(role)
   const [filters, setFilters] = useState({
     tag: '',
-    city: '',
-    district: '',
-    state: '',
+    city: 'Bhopal',
+    district: 'Bhopal',
+    state: 'Madhya Pradesh',
   })
   const productParams = useMemo(
     () => ({
       page: 1,
-      limit: 100,
+      limit: 12,
+      search: '',
       tag: filters.tag.trim() || undefined,
-      city: filters.city.trim() || undefined,
-      district: filters.district.trim() || undefined,
-      state: filters.state.trim() || undefined,
+      city: filters.city.trim(),
+      district: filters.district.trim(),
+      state: filters.state.trim(),
+      crop_id: '',
     }),
     [filters],
   )
@@ -58,28 +58,6 @@ export function VendorProductsPage() {
   const { data: vendorProfile } = useVendorProfile({ enabled: role === 'vendor' })
   const vendorIds = useMemo(() => vendorIdentifiers(user, vendorProfile), [user, vendorProfile])
   const deleteMutation = useShopProductDeleteMutation()
-  const saveMutation = useShopProductSaveMutation()
-
-  const handleApproval = useCallback(async (product, is_approved) => {
-    const retainedImages = product.retained_images || product.images || []
-    await saveMutation.mutateAsync({
-      id: product.id,
-      payload: {
-        name: product.name,
-        tags: product.tags,
-        category_id: numberOrUndefined(product.category_id || product.categoryId),
-        sub_category_id: numberOrUndefined(product.sub_category_id || product.subCategoryId),
-        mrp: product.mrp,
-        vendor_price: product.vendor_price,
-        description: product.description,
-        price: product.price,
-        stock: product.stock,
-        retained_images: retainedImages,
-        is_approved,
-      },
-    })
-    toast.success(is_approved ? 'Product approved successfully.' : 'Product moved back to review.')
-  }, [saveMutation])
 
   const filtersSlot = (
     <div className="grid w-full gap-2 md:grid-cols-4 xl:max-w-4xl">
@@ -138,9 +116,10 @@ export function VendorProductsPage() {
         id: 'actions',
         enableSorting: false,
         cell: ({ row }) => {
+          const id = productId(row.original)
           const isOwnProduct = belongsToVendor(row.original, vendorIds)
-          const canEdit = canApprove || isOwnProduct
-          const canDelete = role === 'vendor' && isOwnProduct
+          const canEdit = Boolean(id) && (canApprove || isOwnProduct)
+          const canDelete = Boolean(id) && (canApprove || (role === 'vendor' && isOwnProduct))
 
           return (
             <div className="flex flex-wrap items-center gap-2">
@@ -151,25 +130,10 @@ export function VendorProductsPage() {
               />
               {canEdit ? (
                 <Button asChild size="sm" variant="secondary" onClick={(event) => event.stopPropagation()}>
-                  <Link to={`${basePath}/${row.original.id}/edit`}>
+                  <Link to={`${basePath}/${id}/edit`}>
                     <Edit2 className="h-4 w-4" />
                     Edit
                   </Link>
-                </Button>
-              ) : null}
-              {canApprove ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={row.original.is_approved ? 'secondary' : 'default'}
-                  disabled={saveMutation.isPending}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    handleApproval(row.original, !row.original.is_approved)
-                  }}
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  {row.original.is_approved ? 'Unapprove' : 'Approve'}
                 </Button>
               ) : null}
               {canDelete ? (
@@ -178,7 +142,7 @@ export function VendorProductsPage() {
                   disabled={deleteMutation.isPending}
                   onDelete={() =>
                     deleteMutation
-                      .mutateAsync(row.original.id)
+                      .mutateAsync(id)
                       .then(() => toast.success('Product deleted successfully.'))
                   }
                 />
@@ -188,7 +152,7 @@ export function VendorProductsPage() {
         },
       },
     ],
-    [basePath, canApprove, deleteMutation, handleApproval, role, saveMutation, vendorIds],
+    [basePath, canApprove, deleteMutation, role, vendorIds],
   )
 
   return (

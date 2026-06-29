@@ -1,6 +1,6 @@
 import { API_BASE_URL, apiClient } from "@/services/api/client";
 
-function unwrapList(response, keys = ["data", "categories", "subcategories", "vendorCategories", "productCategories", "cropCategories", "users", "cropDetails", "cropDiseases", "diseases", "bookings", "serviceBookings", "service_bookings"]) {
+function unwrapList(response, keys = ["data", "products", "items", "records", "rows", "result", "categories", "subcategories", "vendorCategories", "productCategories", "cropCategories", "users", "cropDetails", "cropDiseases", "diseases", "bookings", "serviceBookings", "service_bookings"]) {
   if (Array.isArray(response)) return response;
   for (const key of keys) {
     if (Array.isArray(response?.[key])) return response[key];
@@ -548,12 +548,61 @@ function parseJsonArray(value) {
   return [value].filter(Boolean);
 }
 
+function numericValue(...values) {
+  const value = firstPresent(...values);
+  if (value === undefined) return 0;
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (typeof value === "string") {
+    const normalized = value.replace(/[^\d.-]/g, "");
+    if (!normalized) return 0;
+    const number = Number(normalized);
+    return Number.isFinite(number) ? number : 0;
+  }
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function shopProductId(source = {}, english = {}) {
+  return firstPresent(
+    source.id,
+    source.product_id,
+    source.productId,
+    source._id,
+    source.product?.id,
+    source.product?.product_id,
+    source.product?.productId,
+    source.shopProduct?.id,
+    source.shopProduct?.product_id,
+    source.shopProduct?.productId,
+    source.shop_product?.id,
+    source.shop_product?.product_id,
+    source.shop_product?.productId,
+    english.id,
+    english.product_id,
+    english.productId,
+    english._id,
+  );
+}
+
 function normalizeShopProduct(record) {
-  const source = unwrapRecord(record) || {};
+  const rawSource = unwrapRecord(record) || {};
+  const nestedProduct = firstPresent(
+    rawSource.product,
+    rawSource.shopProduct,
+    rawSource.shop_product,
+    rawSource.item?.product,
+  );
+  const source =
+    nestedProduct && typeof nestedProduct === "object"
+      ? { ...rawSource, ...nestedProduct }
+      : rawSource;
+  const english = localized(source);
+  const hindi = localized(source, "hindi");
   const visibleSource = { ...source };
   delete visibleSource.sku;
   delete visibleSource.product_code;
-  const rawStatus = String(firstPresent(source.status, source.product_status, "")).toLowerCase();
+  const rawStatusValue = firstPresent(source.status, source.product_status);
+  const rawStatus = rawStatusValue ? String(rawStatusValue).toLowerCase() : "";
   const hasApprovalValue =
     firstPresent(source.is_approved, source.isApproved, source.approved) !== undefined;
   const isApproved = hasApprovalValue
@@ -563,40 +612,100 @@ function normalizeShopProduct(record) {
     ? "deleted"
     : firstPresent(
         hasApprovalValue ? (isApproved ? "approved" : "pending_review") : undefined,
-        rawStatus,
+        rawStatus || undefined,
         "published",
       );
+  const price = numericValue(
+    source.price,
+    source.selling_price,
+    source.sellingPrice,
+    source.sale_price,
+    source.salePrice,
+    source.sales_price,
+    source.salesPrice,
+    source.offer_price,
+    source.offerPrice,
+    source.discount_price,
+    source.discountPrice,
+    source.discounted_price,
+    source.discountedPrice,
+    source.final_price,
+    source.finalPrice,
+    source.product_price,
+    source.productPrice,
+    english.price,
+    english.selling_price,
+    english.sale_price,
+    english.offer_price,
+    english.discount_price,
+    english.product_price,
+    source.amount,
+  );
+  const mrp = numericValue(
+    source.mrp,
+    source.maximum_retail_price,
+    source.maximumRetailPrice,
+    source.market_price,
+    source.marketPrice,
+    source.product_mrp,
+    english.mrp,
+    english.maximum_retail_price,
+    english.market_price,
+    english.product_mrp,
+    source.price,
+    price,
+  );
+  const vendorPrice = numericValue(
+    source.vendor_price,
+    source.vendorPrice,
+    source.min_vendor_price,
+    source.minVendorPrice,
+    source.vendor_amount,
+    source.vendorAmount,
+    english.vendor_price,
+    english.min_vendor_price,
+    english.vendor_amount,
+    source.price,
+    price,
+  );
+
+  const id = shopProductId(source, english);
+
   return {
     ...visibleSource,
-    id: firstPresent(source.id, source.product_id, source.productId, source._id),
+    id,
+    product_id: id,
+    productId: id,
     vendorId: firstPresent(source.vendor_id, source.vendorId),
     vendor_id: firstPresent(source.vendor_id, source.vendorId),
-    name: firstPresent(source.name, source.product_name, source.title),
-    name_hi: firstPresent(source.name_hi, source.hindi_name, source.name_hindi),
-    description: firstPresent(source.description, source.product_description, ""),
-    description_hi: firstPresent(source.description_hi, source.hindi_description, source.description_hindi),
-    price: Number(firstPresent(source.price, source.amount, 0)),
-    mrp: Number(firstPresent(source.mrp, source.maximum_retail_price, source.price, 0)),
-    vendor_price: Number(firstPresent(source.vendor_price, source.vendorPrice, source.price, 0)),
-    vendorPrice: Number(firstPresent(source.vendorPrice, source.vendor_price, source.price, 0)),
-    stock: Number(firstPresent(source.stock, source.quantity, 0)),
-    image_url: normalizeAssetUrl(firstPresent(source.image_url, source.imageUrl, source.image, source.thumbnail)),
-    image: normalizeAssetUrl(firstPresent(source.image, source.image_url, source.imageUrl, source.thumbnail)),
-    images: normalizeMedia(firstPresent(source.images, source.product_images, source.image, source.image_url)),
+    name: firstPresent(source.name, source.product_name, source.title, english.name, english.product_name, english.title),
+    name_hi: firstPresent(source.name_hi, source.hindi_name, source.name_hindi, hindi.name, hindi.product_name, hindi.title),
+    description: firstPresent(source.description, source.product_description, english.description, english.product_description, ""),
+    description_hi: firstPresent(source.description_hi, source.hindi_description, source.description_hindi, hindi.description, hindi.product_description),
+    price,
+    selling_price: price,
+    sellingPrice: price,
+    mrp,
+    vendor_price: vendorPrice,
+    vendorPrice,
+    stock: numericValue(source.stock, source.quantity, 0),
+    image_url: normalizeAssetUrl(firstPresent(source.image_url, source.imageUrl, source.image, source.thumbnail, english.image_url, english.image, english.thumbnail)),
+    image: normalizeAssetUrl(firstPresent(source.image, source.image_url, source.imageUrl, source.thumbnail, english.image, english.image_url, english.thumbnail)),
+    images: normalizeMedia(firstPresent(source.images, source.product_images, source.image, source.image_url, english.images, english.product_images, english.image, english.image_url)),
     retained_images: firstPresent(source.retained_images, source.images, source.product_images, []),
     tags: parseJsonArray(firstPresent(source.tags, source.categories, source.category)),
-    category_id: firstPresent(source.category_id, source.categoryId),
-    categoryId: firstPresent(source.categoryId, source.category_id),
-    categoryName: firstPresent(source.categoryName, source.category_name, source.category?.name, source.category?.english?.name),
-    category_name: firstPresent(source.category_name, source.categoryName, source.category?.name, source.category?.english?.name),
-    sub_category_id: firstPresent(source.sub_category_id, source.subCategoryId),
-    subCategoryId: firstPresent(source.subCategoryId, source.sub_category_id),
-    subCategoryName: firstPresent(source.subCategoryName, source.sub_category_name, source.subcategory?.name, source.subcategory?.english?.name),
-    sub_category_name: firstPresent(source.sub_category_name, source.subCategoryName, source.subcategory?.name, source.subcategory?.english?.name),
-    crop_id: firstPresent(source.crop_id, source.cropId),
-    cropId: firstPresent(source.cropId, source.crop_id),
-    crop_name: firstPresent(source.crop_name, source.cropName, source.crop?.name, source.crop?.english?.name),
-    cropName: firstPresent(source.cropName, source.crop_name, source.crop?.name, source.crop?.english?.name),
+    category_id: firstPresent(source.category_id, source.categoryId, source.product_category_id, source.productCategoryId, english.category_id, english.product_category_id, source.category?.id),
+    categoryId: firstPresent(source.categoryId, source.category_id, source.productCategoryId, source.product_category_id, english.category_id, english.product_category_id, source.category?.id),
+    categoryName: firstPresent(source.categoryName, source.category_name, source.product_category_name, source.productCategoryName, english.category_name, english.product_category_name, source.category?.name, source.category?.english?.name),
+    category_name: firstPresent(source.category_name, source.categoryName, source.product_category_name, source.productCategoryName, english.category_name, english.product_category_name, source.category?.name, source.category?.english?.name),
+    sub_category_id: firstPresent(source.sub_category_id, source.subCategoryId, source.subcategory_id, source.subcategoryId, source.product_sub_category_id, source.productSubCategoryId, english.sub_category_id, english.subcategory_id, source.subcategory?.id, source.sub_category?.id),
+    subCategoryId: firstPresent(source.subCategoryId, source.sub_category_id, source.subcategoryId, source.subcategory_id, source.productSubCategoryId, source.product_sub_category_id, english.sub_category_id, english.subcategory_id, source.subcategory?.id, source.sub_category?.id),
+    subCategoryName: firstPresent(source.subCategoryName, source.sub_category_name, source.subcategory_name, source.product_sub_category_name, source.productSubCategoryName, english.sub_category_name, english.subcategory_name, source.subcategory?.name, source.subcategory?.english?.name, source.sub_category?.name),
+    sub_category_name: firstPresent(source.sub_category_name, source.subCategoryName, source.subcategory_name, source.product_sub_category_name, source.productSubCategoryName, english.sub_category_name, english.subcategory_name, source.subcategory?.name, source.subcategory?.english?.name, source.sub_category?.name),
+    crop_id: firstPresent(source.crop_id, source.cropId, english.crop_id),
+    cropId: firstPresent(source.cropId, source.crop_id, english.crop_id),
+    crop_name: firstPresent(source.crop_name, source.cropName, english.crop_name, source.crop?.name, source.crop?.english?.name),
+    cropName: firstPresent(source.cropName, source.crop_name, english.crop_name, source.crop?.name, source.crop?.english?.name),
     product_type: firstPresent(source.product_type, source.productType, source.type),
     productType: firstPresent(source.productType, source.product_type, source.type),
     is_approved: isApproved,
@@ -1759,7 +1868,15 @@ export const shopProductsApi = {
       normalizeShopProduct,
     ),
   detail: async (id) => {
-    const products = await shopProductsApi.list({ limit: 100 });
+    const products = await shopProductsApi.list({
+      page: 1,
+      limit: 12,
+      search: "",
+      city: "Bhopal",
+      district: "Bhopal",
+      state: "Madhya Pradesh",
+      crop_id: "",
+    });
     return products.find((product) => String(product.id) === String(id)) || null;
   },
   create: async (payload) =>
