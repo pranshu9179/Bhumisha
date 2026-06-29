@@ -79,12 +79,7 @@ export const navigationByRole = {
           path: "/admin/products",
           icon: Boxes,
         },
-        {
-          title: "Product List",
-          description: "Create, approve, and update marketplace products.",
-          path: "/admin/product-list",
-          icon: PackagePlus,
-        },
+      
         {
           title: "Guide Headings",
           description: "Bilingual crop guide section headings.",
@@ -104,10 +99,16 @@ export const navigationByRole = {
           icon: Bug,
         },
         {
-          title: "Marketplace Taxonomy",
+          title: "Product",
           description: "Product categories, subcategories, and vendor capabilities.",
           path: "/admin/marketplace-taxonomy",
           icon: Boxes,
+        },
+          {
+          title: "Product List",
+          description: "Create, approve, and update marketplace products.",
+          path: "/admin/product-list",
+          icon: PackagePlus,
         },
         {
           title: "Orders",
