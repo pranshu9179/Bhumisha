@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Sprout } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 import { navigationByRole } from '@/config/navigation'
@@ -27,26 +27,26 @@ export function AppSidebar({ role }) {
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         )}
       >
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="rounded-xl bg-amber-400/15 p-3 text-amber-300 ring-1 ring-amber-200/15">
-              <Sprout className="h-6 w-6" />
-            </div>
-            {sidebarOpen ? (
-              <div className="min-w-0">
-                <p className="truncate text-lg font-semibold">{APP_NAME}</p>
-                <p className="text-xs uppercase tracking-[0.18em] text-emerald-50/65"></p>
-              </div>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            onClick={() => dispatch(toggleSidebar())}
-            className="hidden rounded-full border border-white/10 p-2 text-emerald-50/75 transition hover:bg-white/10 md:block"
-          >
-            {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </button>
-        </div>
+<div className="relative mb-6 flex items-center justify-center">
+  {sidebarOpen && (
+    <div className="text-center">
+      <p className="text-2xl font-semibold">{APP_NAME}</p>
+      <p className="text-xs uppercase tracking-[0.18em] text-emerald-50/65"></p>
+    </div>
+  )}
+
+  <button
+    type="button"
+    onClick={() => dispatch(toggleSidebar())}
+    className="absolute right-0 hidden rounded-full border border-white/10 p-2 text-emerald-50/75 transition hover:bg-white/10 md:block"
+  >
+    {sidebarOpen ? (
+      <ChevronLeft className="h-4 w-4" />
+    ) : (
+      <ChevronRight className="h-4 w-4" />
+    )}
+  </button>
+</div>
 
         <div className="flex-1 space-y-6 overflow-y-auto pr-1">
           {sections.map((section) => (
@@ -63,6 +63,8 @@ export function AppSidebar({ role }) {
                     <NavLink
                       key={item.path}
                       to={item.path}
+                      title={!sidebarOpen ? item.title : undefined}
+                      aria-label={item.title}
                       onClick={() => dispatch(setMobileSidebarOpen(false))}
                       className={({ isActive }) =>
                         cn(

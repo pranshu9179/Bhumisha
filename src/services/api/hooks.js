@@ -436,6 +436,13 @@ export function useShopProductDeleteMutation() {
   )
 }
 
+export function useShopProductStatusMutation() {
+  return useInvalidatingMutation(
+    ({ id, status }) => shopProductsApi.setStatus(id, status),
+    [['shop-products'], ['orders'], ['analytics']],  // ✅ sab invalidate hoga
+  )
+}
+
 export function useProductCategorySaveMutation() {
   return useInvalidatingMutation(
     ({ id, payload }) => (id ? productCategoriesApi.update(id, payload) : productCategoriesApi.create(payload)),

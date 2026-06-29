@@ -1,6 +1,28 @@
 import { API_BASE_URL, apiClient } from "@/services/api/client";
 
-function unwrapList(response, keys = ["data", "products", "items", "records", "rows", "result", "categories", "subcategories", "vendorCategories", "productCategories", "cropCategories", "users", "cropDetails", "cropDiseases", "diseases", "bookings", "serviceBookings", "service_bookings"]) {
+function unwrapList(
+  response,
+  keys = [
+    "data",
+    "products",
+    "items",
+    "records",
+    "rows",
+    "result",
+    "categories",
+    "subcategories",
+    "vendorCategories",
+    "productCategories",
+    "cropCategories",
+    "users",
+    "cropDetails",
+    "cropDiseases",
+    "diseases",
+    "bookings",
+    "serviceBookings",
+    "service_bookings",
+  ],
+) {
   if (Array.isArray(response)) return response;
   for (const key of keys) {
     if (Array.isArray(response?.[key])) return response[key];
@@ -45,14 +67,18 @@ function localized(record, locale = "english") {
 }
 
 function firstPresent(...values) {
-  return values.find((value) => value !== undefined && value !== null && value !== "");
+  return values.find(
+    (value) => value !== undefined && value !== null && value !== "",
+  );
 }
 
 function toBooleanFlag(value) {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value === 1;
   if (typeof value === "string") {
-    return ["1", "true", "yes", "deleted", "disabled"].includes(value.trim().toLowerCase());
+    return ["1", "true", "yes", "deleted", "disabled"].includes(
+      value.trim().toLowerCase(),
+    );
   }
   return false;
 }
@@ -108,8 +134,14 @@ function normalizeAuthSession(response) {
       email: sourceUser?.email || "",
       phone: sourceUser?.phone || "",
       ...sourceUser,
-      avatar: normalizedProfileImage(sourceUser?.avatar, sourceUser?.profile_image),
-      profile_image: normalizedProfileImage(sourceUser?.profile_image, sourceUser?.avatar),
+      avatar: normalizedProfileImage(
+        sourceUser?.avatar,
+        sourceUser?.profile_image,
+      ),
+      profile_image: normalizedProfileImage(
+        sourceUser?.profile_image,
+        sourceUser?.avatar,
+      ),
       role,
       password: undefined,
     },
@@ -151,10 +183,16 @@ function normalizeUser(record) {
     avatar: normalizedProfileImage(source.avatar, source.profile_image),
     profile_image: normalizedProfileImage(source.profile_image, source.avatar),
     role: String(source.role || "user").toLowerCase(),
-    status: isDeleted ? "inactive" : String(statusValue || "active").toLowerCase(),
+    status: isDeleted
+      ? "inactive"
+      : String(statusValue || "active").toLowerCase(),
     is_delete: isDeleted,
     otp_verify: source.otp_verify,
-    lastActive: source.lastActive ?? source.last_active ?? source.updated_at ?? source.updatedAt,
+    lastActive:
+      source.lastActive ??
+      source.last_active ??
+      source.updated_at ??
+      source.updatedAt,
     createdAt: source.createdAt ?? source.created_at,
     updatedAt: source.updatedAt ?? source.updated_at,
     password: undefined,
@@ -203,8 +241,18 @@ function normalizeCrop(record) {
     ...record,
     id: english.id ?? record?.id,
     name: firstPresent(english.name, record?.name),
-    name_hi: firstPresent(hindi.name, record?.name_hi, record?.hindi_name, record?.name_hindi),
-    description: firstPresent(english.description, english.decription, record?.description, record?.decription),
+    name_hi: firstPresent(
+      hindi.name,
+      record?.name_hi,
+      record?.hindi_name,
+      record?.name_hindi,
+    ),
+    description: firstPresent(
+      english.description,
+      english.decription,
+      record?.description,
+      record?.decription,
+    ),
     description_hi: firstPresent(
       hindi.description,
       hindi.decription,
@@ -220,12 +268,26 @@ function normalizeCrop(record) {
       record?.categoryName ??
       record?.category,
     images: normalizeMedia(
-      firstPresent(english.crop_theme_image, english.image, record?.crop_theme_image, record?.image),
+      firstPresent(
+        english.crop_theme_image,
+        english.image,
+        record?.crop_theme_image,
+        record?.image,
+      ),
     ),
     image: normalizeAssetUrl(
-      firstPresent(english.crop_theme_image, english.image, record?.crop_theme_image, record?.image),
+      firstPresent(
+        english.crop_theme_image,
+        english.image,
+        record?.crop_theme_image,
+        record?.image,
+      ),
     ),
-    crop_theme_image_id: firstPresent(english.crop_theme_image_id, record?.crop_theme_image_id, []),
+    crop_theme_image_id: firstPresent(
+      english.crop_theme_image_id,
+      record?.crop_theme_image_id,
+      [],
+    ),
     sequence: english.sequence ?? record?.sequence,
     sku: record?.sku ?? `CROP-${english.id ?? record?.id ?? ""}`,
     price: record?.price ?? 0,
@@ -262,7 +324,11 @@ function normalizeCropDisease(record) {
     ...record,
     id: english.id ?? record?.id ?? record?._id,
     cropId: firstPresent(english.crop_id, record?.crop_id, record?.cropId),
-    cropName: firstPresent(english.crop_name, record?.crop_name, record?.cropName),
+    cropName: firstPresent(
+      english.crop_name,
+      record?.crop_name,
+      record?.cropName,
+    ),
     cropName_hi: firstPresent(hindi.crop_name, record?.crop_name_hi),
     title: firstPresent(english.title, record?.title),
     title_hi: firstPresent(hindi.title, record?.title_hi),
@@ -279,8 +345,16 @@ function normalizeCropDisease(record) {
     ),
     is_delete: isDeleted,
     status: isDeleted ? "deleted" : "active",
-    createdAt: english.createdAt ?? english.created_at ?? record?.createdAt ?? record?.created_at,
-    updatedAt: english.updatedAt ?? english.updated_at ?? record?.updatedAt ?? record?.updated_at,
+    createdAt:
+      english.createdAt ??
+      english.created_at ??
+      record?.createdAt ??
+      record?.created_at,
+    updatedAt:
+      english.updatedAt ??
+      english.updated_at ??
+      record?.updatedAt ??
+      record?.updated_at,
   };
 }
 
@@ -293,17 +367,44 @@ function normalizeCheckoutResponse(response) {
     id: firstPresent(order.id, source.orderId, source.order_id),
     orderId: firstPresent(source.orderId, source.order_id, order.id),
     order_id: firstPresent(source.order_id, source.orderId, order.id),
-    totalAmount: Number(firstPresent(source.totalAmount, source.total_amount, order.totalAmount, order.total, 0)),
-    total_amount: Number(firstPresent(source.total_amount, source.totalAmount, order.totalAmount, order.total, 0)),
-    paymentUrl: firstPresent(source.paymentUrl, source.payment_url, source.data?.paymentUrl, source.data?.payment_url),
-    payment_url: firstPresent(source.payment_url, source.paymentUrl, source.data?.payment_url, source.data?.paymentUrl),
+    totalAmount: Number(
+      firstPresent(
+        source.totalAmount,
+        source.total_amount,
+        order.totalAmount,
+        order.total,
+        0,
+      ),
+    ),
+    total_amount: Number(
+      firstPresent(
+        source.total_amount,
+        source.totalAmount,
+        order.totalAmount,
+        order.total,
+        0,
+      ),
+    ),
+    paymentUrl: firstPresent(
+      source.paymentUrl,
+      source.payment_url,
+      source.data?.paymentUrl,
+      source.data?.payment_url,
+    ),
+    payment_url: firstPresent(
+      source.payment_url,
+      source.paymentUrl,
+      source.data?.payment_url,
+      source.data?.paymentUrl,
+    ),
     message: source.message,
     success: source.success,
   };
 }
 
 function inferMediaType(item, url = "") {
-  const explicitType = typeof item === "object" ? item?.type || item?.resource_type : "";
+  const explicitType =
+    typeof item === "object" ? item?.type || item?.resource_type : "";
   if (explicitType) return String(explicitType).toLowerCase();
   return /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url) ? "video" : "image";
 }
@@ -341,7 +442,8 @@ function normalizeQueryMedia(value) {
             url,
             type: inferMediaType(value, url),
             public_id: value.public_id ?? value.publicId,
-            original_name: value.original_name ?? value.originalName ?? value.name,
+            original_name:
+              value.original_name ?? value.originalName ?? value.name,
           },
         ]
       : [];
@@ -352,8 +454,16 @@ function normalizeQueryMedia(value) {
 function normalizeQueryReply(record) {
   const source = unwrapRecord(record) || {};
   const id = firstPresent(source.reply_id, source.id, source._id);
-  const repliedAt = firstPresent(source.replied_at, source.created_at, source.createdAt);
-  const repliedBy = firstPresent(source.replied_by, source.responder_name, source.username);
+  const repliedAt = firstPresent(
+    source.replied_at,
+    source.created_at,
+    source.createdAt,
+  );
+  const repliedBy = firstPresent(
+    source.replied_by,
+    source.responder_name,
+    source.username,
+  );
 
   return {
     ...source,
@@ -361,14 +471,34 @@ function normalizeQueryReply(record) {
     reply_id: id,
     replyText: firstPresent(source.reply_text, source.replyText, source.text),
     reply_text: firstPresent(source.reply_text, source.replyText, source.text),
-    media: normalizeQueryMedia(firstPresent(source.media_url, source.reply_media, source.media)),
-    media_url: normalizeQueryMedia(firstPresent(source.media_url, source.reply_media, source.media)),
-    responderType: firstPresent(source.responder_type, source.responderRole, source.responder_role),
-    responder_type: firstPresent(source.responder_type, source.responderRole, source.responder_role),
+    media: normalizeQueryMedia(
+      firstPresent(source.media_url, source.reply_media, source.media),
+    ),
+    media_url: normalizeQueryMedia(
+      firstPresent(source.media_url, source.reply_media, source.media),
+    ),
+    responderType: firstPresent(
+      source.responder_type,
+      source.responderRole,
+      source.responder_role,
+    ),
+    responder_type: firstPresent(
+      source.responder_type,
+      source.responderRole,
+      source.responder_role,
+    ),
     repliedBy,
     replied_by: repliedBy,
-    responderAvatar: normalizedProfileImage(source.responder_avatar, source.avatar, source.profile_image),
-    responder_avatar: normalizedProfileImage(source.responder_avatar, source.avatar, source.profile_image),
+    responderAvatar: normalizedProfileImage(
+      source.responder_avatar,
+      source.avatar,
+      source.profile_image,
+    ),
+    responder_avatar: normalizedProfileImage(
+      source.responder_avatar,
+      source.avatar,
+      source.profile_image,
+    ),
     createdAt: repliedAt,
     created_at: repliedAt,
     repliedAt,
@@ -380,12 +510,35 @@ function normalizeQuery(record) {
   const source = unwrapRecord(record) || {};
   const id = firstPresent(source.id, source.query_id, source._id);
   const cropName = firstPresent(source.crop_name, source.cropName, source.crop);
-  const askedBy = firstPresent(source.asked_by, source.farmerName, source.username, source.user_name);
-  const createdAt = firstPresent(source.created_at, source.createdAt, source.query_created_at);
+  const askedBy = firstPresent(
+    source.asked_by,
+    source.farmerName,
+    source.username,
+    source.user_name,
+  );
+  const createdAt = firstPresent(
+    source.created_at,
+    source.createdAt,
+    source.query_created_at,
+  );
   const confirmedAt = firstPresent(source.confirmed_at, source.confirmedAt);
-  const replyCount = Number(firstPresent(source.reply_count, source.total_replies, source.replyCount, 0));
-  const media = normalizeQueryMedia(firstPresent(source.media_url, source.media, source.files));
-  const queryText = firstPresent(source.query_text, source.queryText, source.description, source.issueType);
+  const replyCount = Number(
+    firstPresent(
+      source.reply_count,
+      source.total_replies,
+      source.replyCount,
+      0,
+    ),
+  );
+  const media = normalizeQueryMedia(
+    firstPresent(source.media_url, source.media, source.files),
+  );
+  const queryText = firstPresent(
+    source.query_text,
+    source.queryText,
+    source.description,
+    source.issueType,
+  );
 
   return {
     ...source,
@@ -395,8 +548,16 @@ function normalizeQuery(record) {
     query_text: queryText,
     media,
     media_url: media,
-    mediaType: firstPresent(source.media_type, source.mediaType, media.length ? "mixed" : "none"),
-    media_type: firstPresent(source.media_type, source.mediaType, media.length ? "mixed" : "none"),
+    mediaType: firstPresent(
+      source.media_type,
+      source.mediaType,
+      media.length ? "mixed" : "none",
+    ),
+    media_type: firstPresent(
+      source.media_type,
+      source.mediaType,
+      media.length ? "mixed" : "none",
+    ),
     status: String(source.status || "pending").toLowerCase(),
     cropId: firstPresent(source.crop_id, source.cropId),
     crop_id: firstPresent(source.crop_id, source.cropId),
@@ -404,8 +565,12 @@ function normalizeQuery(record) {
     crop_name: cropName,
     cropNameHi: firstPresent(source.crop_name_hi, source.cropNameHi),
     crop_name_hi: firstPresent(source.crop_name_hi, source.cropNameHi),
-    cropThemeImage: normalizeAssetUrl(firstPresent(source.crop_theme_image, source.cropThemeImage)),
-    crop_theme_image: normalizeAssetUrl(firstPresent(source.crop_theme_image, source.cropThemeImage)),
+    cropThemeImage: normalizeAssetUrl(
+      firstPresent(source.crop_theme_image, source.cropThemeImage),
+    ),
+    crop_theme_image: normalizeAssetUrl(
+      firstPresent(source.crop_theme_image, source.cropThemeImage),
+    ),
     askedBy,
     asked_by: askedBy,
     farmerName: askedBy || "Unknown user",
@@ -413,18 +578,37 @@ function normalizeQuery(record) {
     user_id: firstPresent(source.user_id, source.userId),
     userPhone: firstPresent(source.user_phone, source.userPhone),
     user_phone: firstPresent(source.user_phone, source.userPhone),
-    userAvatar: normalizedProfileImage(source.user_avatar, source.profile_image, source.avatar),
-    user_avatar: normalizedProfileImage(source.user_avatar, source.profile_image, source.avatar),
+    userAvatar: normalizedProfileImage(
+      source.user_avatar,
+      source.profile_image,
+      source.avatar,
+    ),
+    user_avatar: normalizedProfileImage(
+      source.user_avatar,
+      source.profile_image,
+      source.avatar,
+    ),
     replyCount,
     reply_count: replyCount,
-    totalReplies: Number(firstPresent(source.total_replies, source.reply_count, source.totalReplies, replyCount)),
+    totalReplies: Number(
+      firstPresent(
+        source.total_replies,
+        source.reply_count,
+        source.totalReplies,
+        replyCount,
+      ),
+    ),
     createdAt,
     created_at: createdAt,
     confirmedAt,
     confirmed_at: confirmedAt,
     issueType: queryText,
     crop: cropName,
-    priority: source.priority || (String(source.status).toLowerCase() === "pending" ? "pending" : "confirmed"),
+    priority:
+      source.priority ||
+      (String(source.status).toLowerCase() === "pending"
+        ? "pending"
+        : "confirmed"),
     replies: (source.replies || []).map(normalizeQueryReply),
   };
 }
@@ -480,19 +664,25 @@ function normalizeUserActivity(response) {
   return {
     ...source,
     user: source.user ? normalizeUser(source.user) : null,
-    queriesMade: (source.queries_made || source.queriesMade || []).map(normalizeQuery),
-    queries_made: (source.queries_made || source.queriesMade || []).map(normalizeQuery),
-    repliesGiven: (source.replies_given || source.repliesGiven || []).map(normalizeStaffReply),
-    replies_given: (source.replies_given || source.repliesGiven || []).map(normalizeStaffReply),
+    queriesMade: (source.queries_made || source.queriesMade || []).map(
+      normalizeQuery,
+    ),
+    queries_made: (source.queries_made || source.queriesMade || []).map(
+      normalizeQuery,
+    ),
+    repliesGiven: (source.replies_given || source.repliesGiven || []).map(
+      normalizeStaffReply,
+    ),
+    replies_given: (source.replies_given || source.repliesGiven || []).map(
+      normalizeStaffReply,
+    ),
   };
 }
 
 function normalizeMedia(value) {
   if (!value) return [];
   if (Array.isArray(value)) {
-    return value
-      .flatMap((item) => normalizeMedia(item))
-      .filter(Boolean);
+    return value.flatMap((item) => normalizeMedia(item)).filter(Boolean);
   }
   if (typeof value === "string") {
     try {
@@ -584,7 +774,7 @@ function shopProductId(source = {}, english = {}) {
   );
 }
 
-function normalizeShopProduct(record) {
+function normalizeShopProduct(record, options = {}) {
   const rawSource = unwrapRecord(record) || {};
   const nestedProduct = firstPresent(
     rawSource.product,
@@ -601,19 +791,72 @@ function normalizeShopProduct(record) {
   const visibleSource = { ...source };
   delete visibleSource.sku;
   delete visibleSource.product_code;
-  const rawStatusValue = firstPresent(source.status, source.product_status);
+  const rawStatusValue = firstPresent(
+    source.status,
+    english.status,
+    hindi.status,
+    source.product_status,
+    english.product_status,
+    options.status,
+  );
   const rawStatus = rawStatusValue ? String(rawStatusValue).toLowerCase() : "";
+  const rawActiveFlag = firstPresent(
+    source.is_active,
+    english.is_active,
+    hindi.is_active,
+    source.isActive,
+    english.isActive,
+    source.active,
+    english.active,
+  );
+  const hasInactiveFlag =
+    rawActiveFlag !== undefined &&
+    ["0", "false", "no", "inactive", "disabled"].includes(
+      String(rawActiveFlag).trim().toLowerCase(),
+    );
+  const isInactive =
+    isDeletedRecord(
+      source.is_delete,
+      english.is_delete,
+      hindi.is_delete,
+      source.isDelete,
+      english.isDelete,
+      source.deleted,
+      english.deleted,
+    ) ||
+    hasInactiveFlag ||
+    ["deleted", "inactive", "disabled"].includes(rawStatus);
   const hasApprovalValue =
-    firstPresent(source.is_approved, source.isApproved, source.approved) !== undefined;
+    firstPresent(
+      source.is_approved,
+      english.is_approved,
+      hindi.is_approved,
+      source.isApproved,
+      english.isApproved,
+      source.approved,
+      english.approved,
+    ) !== undefined;
   const isApproved = hasApprovalValue
-    ? toBooleanFlag(firstPresent(source.is_approved, source.isApproved, source.approved))
+    ? toBooleanFlag(
+        firstPresent(
+          source.is_approved,
+          english.is_approved,
+          hindi.is_approved,
+          source.isApproved,
+          english.isApproved,
+          source.approved,
+          english.approved,
+        ),
+      )
     : ["approved", "published", "active"].includes(rawStatus);
-  const status = rawStatus === "deleted"
-    ? "deleted"
+  const status = isInactive
+    ? "inactive"
     : firstPresent(
-        hasApprovalValue ? (isApproved ? "approved" : "pending_review") : undefined,
-        rawStatus || undefined,
-        "published",
+        ["pending", "pending_review", "unapproved", "draft"].includes(rawStatus)
+          ? rawStatus
+          : undefined,
+        hasApprovalValue && !isApproved ? "pending_review" : undefined,
+        "active",
       );
   const price = numericValue(
     source.price,
@@ -676,44 +919,383 @@ function normalizeShopProduct(record) {
     id,
     product_id: id,
     productId: id,
-    vendorId: firstPresent(source.vendor_id, source.vendorId),
-    vendor_id: firstPresent(source.vendor_id, source.vendorId),
-    name: firstPresent(source.name, source.product_name, source.title, english.name, english.product_name, english.title),
-    name_hi: firstPresent(source.name_hi, source.hindi_name, source.name_hindi, hindi.name, hindi.product_name, hindi.title),
-    description: firstPresent(source.description, source.product_description, english.description, english.product_description, ""),
-    description_hi: firstPresent(source.description_hi, source.hindi_description, source.description_hindi, hindi.description, hindi.product_description),
+    vendorId: firstPresent(
+      source.vendor_id,
+      english.vendor_id,
+      hindi.vendor_id,
+      source.vendorId,
+      english.vendorId,
+      source.vendor?.id,
+      source.vendor?.vendor_id,
+      source.vendor?.vendorId,
+    ),
+    vendor_id: firstPresent(
+      source.vendor_id,
+      english.vendor_id,
+      hindi.vendor_id,
+      source.vendorId,
+      english.vendorId,
+      source.vendor?.id,
+      source.vendor?.vendor_id,
+      source.vendor?.vendorId,
+    ),
+    vendorUserId: firstPresent(
+      source.vendor_user_id,
+      english.vendor_user_id,
+      hindi.vendor_user_id,
+      source.vendorUserId,
+      english.vendorUserId,
+      source.vendor?.user_id,
+      source.vendor?.userId,
+      source.vendor?.user?.id,
+    ),
+    vendor_user_id: firstPresent(
+      source.vendor_user_id,
+      english.vendor_user_id,
+      hindi.vendor_user_id,
+      source.vendorUserId,
+      english.vendorUserId,
+      source.vendor?.user_id,
+      source.vendor?.userId,
+      source.vendor?.user?.id,
+    ),
+    userId: firstPresent(
+      source.userId,
+      english.userId,
+      source.user_id,
+      english.user_id,
+      hindi.user_id,
+      source.createdBy,
+      source.created_by,
+      source.vendor?.userId,
+      source.vendor?.user_id,
+      source.vendor?.user?.id,
+    ),
+    user_id: firstPresent(
+      source.user_id,
+      english.user_id,
+      hindi.user_id,
+      source.userId,
+      english.userId,
+      source.created_by,
+      source.createdBy,
+      source.vendor?.user_id,
+      source.vendor?.userId,
+      source.vendor?.user?.id,
+    ),
+    name: firstPresent(
+      source.name,
+      source.product_name,
+      source.title,
+      english.name,
+      english.product_name,
+      english.title,
+    ),
+    name_hi: firstPresent(
+      source.name_hi,
+      source.hindi_name,
+      source.name_hindi,
+      hindi.name,
+      hindi.product_name,
+      hindi.title,
+    ),
+    description: firstPresent(
+      source.description,
+      source.product_description,
+      english.description,
+      english.product_description,
+      "",
+    ),
+    description_hi: firstPresent(
+      source.description_hi,
+      source.hindi_description,
+      source.description_hindi,
+      hindi.description,
+      hindi.product_description,
+    ),
     price,
     selling_price: price,
     sellingPrice: price,
     mrp,
     vendor_price: vendorPrice,
     vendorPrice,
-    stock: numericValue(source.stock, source.quantity, 0),
-    image_url: normalizeAssetUrl(firstPresent(source.image_url, source.imageUrl, source.image, source.thumbnail, english.image_url, english.image, english.thumbnail)),
-    image: normalizeAssetUrl(firstPresent(source.image, source.image_url, source.imageUrl, source.thumbnail, english.image, english.image_url, english.thumbnail)),
-    images: normalizeMedia(firstPresent(source.images, source.product_images, source.image, source.image_url, english.images, english.product_images, english.image, english.image_url)),
-    retained_images: firstPresent(source.retained_images, source.images, source.product_images, []),
-    tags: parseJsonArray(firstPresent(source.tags, source.categories, source.category)),
-    category_id: firstPresent(source.category_id, source.categoryId, source.product_category_id, source.productCategoryId, english.category_id, english.product_category_id, source.category?.id),
-    categoryId: firstPresent(source.categoryId, source.category_id, source.productCategoryId, source.product_category_id, english.category_id, english.product_category_id, source.category?.id),
-    categoryName: firstPresent(source.categoryName, source.category_name, source.product_category_name, source.productCategoryName, english.category_name, english.product_category_name, source.category?.name, source.category?.english?.name),
-    category_name: firstPresent(source.category_name, source.categoryName, source.product_category_name, source.productCategoryName, english.category_name, english.product_category_name, source.category?.name, source.category?.english?.name),
-    sub_category_id: firstPresent(source.sub_category_id, source.subCategoryId, source.subcategory_id, source.subcategoryId, source.product_sub_category_id, source.productSubCategoryId, english.sub_category_id, english.subcategory_id, source.subcategory?.id, source.sub_category?.id),
-    subCategoryId: firstPresent(source.subCategoryId, source.sub_category_id, source.subcategoryId, source.subcategory_id, source.productSubCategoryId, source.product_sub_category_id, english.sub_category_id, english.subcategory_id, source.subcategory?.id, source.sub_category?.id),
-    subCategoryName: firstPresent(source.subCategoryName, source.sub_category_name, source.subcategory_name, source.product_sub_category_name, source.productSubCategoryName, english.sub_category_name, english.subcategory_name, source.subcategory?.name, source.subcategory?.english?.name, source.sub_category?.name),
-    sub_category_name: firstPresent(source.sub_category_name, source.subCategoryName, source.subcategory_name, source.product_sub_category_name, source.productSubCategoryName, english.sub_category_name, english.subcategory_name, source.subcategory?.name, source.subcategory?.english?.name, source.sub_category?.name),
+    stock: numericValue(
+      source.stock,
+      english.stock,
+      hindi.stock,
+      source.quantity,
+      english.quantity,
+      0,
+    ),
+    image_url: normalizeAssetUrl(
+      firstPresent(
+        source.image_url,
+        source.imageUrl,
+        source.image,
+        source.thumbnail,
+        english.image_url,
+        english.image,
+        english.thumbnail,
+      ),
+    ),
+    image: normalizeAssetUrl(
+      firstPresent(
+        source.image,
+        source.image_url,
+        source.imageUrl,
+        source.thumbnail,
+        english.image,
+        english.image_url,
+        english.thumbnail,
+      ),
+    ),
+    images: normalizeMedia(
+      firstPresent(
+        source.images,
+        source.product_images,
+        source.image,
+        source.image_url,
+        english.images,
+        english.product_images,
+        english.image,
+        english.image_url,
+      ),
+    ),
+    retained_images: firstPresent(
+      source.retained_images,
+      source.images,
+      source.product_images,
+      [],
+    ),
+    tags: parseJsonArray(
+      firstPresent(
+        source.tags,
+        english.tags,
+        hindi.tags,
+        source.categories,
+        english.categories,
+        source.category,
+      ),
+    ),
+    category_id: firstPresent(
+      source.category_id,
+      source.categoryId,
+      source.product_category_id,
+      source.productCategoryId,
+      english.category_id,
+      english.product_category_id,
+      source.category?.id,
+    ),
+    categoryId: firstPresent(
+      source.categoryId,
+      source.category_id,
+      source.productCategoryId,
+      source.product_category_id,
+      english.category_id,
+      english.product_category_id,
+      source.category?.id,
+    ),
+    categoryName: firstPresent(
+      source.categoryName,
+      source.category_name,
+      source.product_category_name,
+      source.productCategoryName,
+      english.category_name,
+      english.product_category_name,
+      source.category?.name,
+      source.category?.english?.name,
+    ),
+    category_name: firstPresent(
+      source.category_name,
+      source.categoryName,
+      source.product_category_name,
+      source.productCategoryName,
+      english.category_name,
+      english.product_category_name,
+      source.category?.name,
+      source.category?.english?.name,
+    ),
+    sub_category_id: firstPresent(
+      source.sub_category_id,
+      source.subCategoryId,
+      source.subcategory_id,
+      source.subcategoryId,
+      source.product_sub_category_id,
+      source.productSubCategoryId,
+      english.sub_category_id,
+      english.subcategory_id,
+      source.subcategory?.id,
+      source.sub_category?.id,
+    ),
+    subCategoryId: firstPresent(
+      source.subCategoryId,
+      source.sub_category_id,
+      source.subcategoryId,
+      source.subcategory_id,
+      source.productSubCategoryId,
+      source.product_sub_category_id,
+      english.sub_category_id,
+      english.subcategory_id,
+      source.subcategory?.id,
+      source.sub_category?.id,
+    ),
+    subCategoryName: firstPresent(
+      source.subCategoryName,
+      source.sub_category_name,
+      source.subcategory_name,
+      source.product_sub_category_name,
+      source.productSubCategoryName,
+      english.sub_category_name,
+      english.subcategory_name,
+      source.subcategory?.name,
+      source.subcategory?.english?.name,
+      source.sub_category?.name,
+    ),
+    sub_category_name: firstPresent(
+      source.sub_category_name,
+      source.subCategoryName,
+      source.subcategory_name,
+      source.product_sub_category_name,
+      source.productSubCategoryName,
+      english.sub_category_name,
+      english.subcategory_name,
+      source.subcategory?.name,
+      source.subcategory?.english?.name,
+      source.sub_category?.name,
+    ),
     crop_id: firstPresent(source.crop_id, source.cropId, english.crop_id),
     cropId: firstPresent(source.cropId, source.crop_id, english.crop_id),
-    crop_name: firstPresent(source.crop_name, source.cropName, english.crop_name, source.crop?.name, source.crop?.english?.name),
-    cropName: firstPresent(source.cropName, source.crop_name, english.crop_name, source.crop?.name, source.crop?.english?.name),
-    product_type: firstPresent(source.product_type, source.productType, source.type),
-    productType: firstPresent(source.productType, source.product_type, source.type),
+    crop_name: firstPresent(
+      source.crop_name,
+      source.cropName,
+      english.crop_name,
+      source.crop?.name,
+      source.crop?.english?.name,
+    ),
+    cropName: firstPresent(
+      source.cropName,
+      source.crop_name,
+      english.crop_name,
+      source.crop?.name,
+      source.crop?.english?.name,
+    ),
+    product_type: firstPresent(
+      source.product_type,
+      english.product_type,
+      hindi.product_type,
+      source.productType,
+      english.productType,
+      source.type,
+    ),
+    productType: firstPresent(
+      source.productType,
+      english.productType,
+      source.product_type,
+      english.product_type,
+      hindi.product_type,
+      source.type,
+    ),
     is_approved: isApproved,
     isApproved,
     approvalStatus: isApproved ? "approved" : "pending_review",
     status,
-    company_name: firstPresent(source.company_name, source.companyName, source.vendor_name),
-    companyName: firstPresent(source.companyName, source.company_name, source.vendor_name),
+    is_delete: isInactive,
+    company_name: firstPresent(
+      source.company_name,
+      english.company_name,
+      hindi.company_name,
+      source.companyName,
+      english.companyName,
+      source.vendor_name,
+      english.vendor_name,
+      source.vendorName,
+      english.vendorName,
+      source.vendor?.company_name,
+      source.vendor?.companyName,
+      source.vendor?.name,
+    ),
+    companyName: firstPresent(
+      source.companyName,
+      english.companyName,
+      source.company_name,
+      english.company_name,
+      hindi.company_name,
+      source.vendorName,
+      english.vendorName,
+      source.vendor_name,
+      english.vendor_name,
+      source.vendor?.companyName,
+      source.vendor?.company_name,
+      source.vendor?.name,
+    ),
+    vendorName: firstPresent(
+      source.vendorName,
+      english.vendorName,
+      source.vendor_name,
+      english.vendor_name,
+      source.companyName,
+      english.companyName,
+      source.company_name,
+      english.company_name,
+      hindi.company_name,
+      source.vendor?.companyName,
+      source.vendor?.company_name,
+      source.vendor?.name,
+    ),
+    vendor_name: firstPresent(
+      source.vendor_name,
+      english.vendor_name,
+      source.vendorName,
+      english.vendorName,
+      source.company_name,
+      english.company_name,
+      hindi.company_name,
+      source.companyName,
+      english.companyName,
+      source.vendor?.company_name,
+      source.vendor?.companyName,
+      source.vendor?.name,
+    ),
+    vendorEmail: firstPresent(
+      source.vendorEmail,
+      english.vendorEmail,
+      source.vendor_email,
+      english.vendor_email,
+      source.vendor?.email,
+    ),
+    vendor_email: firstPresent(
+      source.vendor_email,
+      english.vendor_email,
+      source.vendorEmail,
+      english.vendorEmail,
+      source.vendor?.email,
+    ),
+    vendorPhone: firstPresent(
+      source.vendorPhone,
+      english.vendorPhone,
+      source.vendor_phone,
+      english.vendor_phone,
+      source.mobile_number,
+      english.mobile_number,
+      source.vendor?.phone,
+      source.vendor?.mobile_number,
+    ),
+    vendor_phone: firstPresent(
+      source.vendor_phone,
+      english.vendor_phone,
+      source.vendorPhone,
+      english.vendorPhone,
+      source.mobile_number,
+      english.mobile_number,
+      source.vendor?.phone,
+      source.vendor?.mobile_number,
+    ),
+    mobile_number: firstPresent(
+      source.mobile_number,
+      english.mobile_number,
+      hindi.mobile_number,
+      source.vendor?.mobile_number,
+    ),
     createdAt: firstPresent(source.createdAt, source.created_at),
     updatedAt: firstPresent(source.updatedAt, source.updated_at),
   };
@@ -723,7 +1305,9 @@ function normalizeTaxonomyCategory(record) {
   const source = unwrapRecord(record) || {};
   const english = localized(source);
   const hindi = localized(source, "hindi");
-  const isDeleted = isDeletedRecord(firstPresent(source.is_delete, english.is_delete, hindi.is_delete, false));
+  const isDeleted = isDeletedRecord(
+    firstPresent(source.is_delete, english.is_delete, hindi.is_delete, false),
+  );
   return {
     ...source,
     id: firstPresent(source.id, english.id),
@@ -733,11 +1317,37 @@ function normalizeTaxonomyCategory(record) {
     categoryId: firstPresent(source.categoryId, source.category_id),
     category_name: firstPresent(source.category_name, source.categoryName),
     categoryName: firstPresent(source.categoryName, source.category_name),
-    image: normalizeAssetUrl(firstPresent(source.image, source.image_url, source.imageUrl, english.image)),
-    image_url: normalizeAssetUrl(firstPresent(source.image_url, source.imageUrl, source.image, english.image)),
-    sub_category_required: toBooleanFlag(firstPresent(source.sub_category_required, source.subCategoryRequired, false)),
-    allowed_services: firstPresent(source.allowed_services, source.allowedServices, "product_only"),
-    status: isDeleted ? "deleted" : String(firstPresent(source.status, "active")).toLowerCase(),
+    image: normalizeAssetUrl(
+      firstPresent(
+        source.image,
+        source.image_url,
+        source.imageUrl,
+        english.image,
+      ),
+    ),
+    image_url: normalizeAssetUrl(
+      firstPresent(
+        source.image_url,
+        source.imageUrl,
+        source.image,
+        english.image,
+      ),
+    ),
+    sub_category_required: toBooleanFlag(
+      firstPresent(
+        source.sub_category_required,
+        source.subCategoryRequired,
+        false,
+      ),
+    ),
+    allowed_services: firstPresent(
+      source.allowed_services,
+      source.allowedServices,
+      "product_only",
+    ),
+    status: isDeleted
+      ? "deleted"
+      : String(firstPresent(source.status, "active")).toLowerCase(),
     createdAt: firstPresent(source.createdAt, source.created_at),
     updatedAt: firstPresent(source.updatedAt, source.updated_at),
   };
@@ -750,10 +1360,20 @@ function normalizeAddress(record) {
     id: firstPresent(source.id, source.address_id, source._id),
     name: firstPresent(source.name, source.full_name, source.recipient_name),
     phone: firstPresent(source.phone, source.mobile_number, source.mobile),
-    address_line: firstPresent(source.address_line, source.addressLine, source.line1, source.address),
+    address_line: firstPresent(
+      source.address_line,
+      source.addressLine,
+      source.line1,
+      source.address,
+    ),
     city: source.city || "",
     state: source.state || "",
-    zip_code: firstPresent(source.zip_code, source.zipCode, source.pincode, source.postal_code),
+    zip_code: firstPresent(
+      source.zip_code,
+      source.zipCode,
+      source.pincode,
+      source.postal_code,
+    ),
   };
 }
 
@@ -768,7 +1388,8 @@ function checkoutPayload(payload = {}) {
     shippingAddress: {
       name: address.name || "",
       phone: address.phone || "",
-      address_line: address.address_line || address.addressLine || address.address || "",
+      address_line:
+        address.address_line || address.addressLine || address.address || "",
       city: address.city || "",
       state: address.state || "",
       zip_code: address.zip_code || address.zipCode || address.pincode || "",
@@ -779,19 +1400,43 @@ function checkoutPayload(payload = {}) {
 function normalizeOrder(record) {
   const unwrapped = unwrapRecord(record) || {};
   const source = unwrapped.order || unwrapped;
-  const product = firstPresent(source.product, source.shopProduct, source.shop_product, source.item?.product) || {};
-  const vendor = firstPresent(
-    source.vendor,
-    source.vendorProfile,
-    source.vendor_profile,
-    product.vendor,
-    product.vendorProfile,
-    product.vendor_profile,
-  ) || {};
+  const product =
+    firstPresent(
+      source.product,
+      source.shopProduct,
+      source.shop_product,
+      source.item?.product,
+    ) || {};
+  const vendor =
+    firstPresent(
+      source.vendor,
+      source.vendorProfile,
+      source.vendor_profile,
+      product.vendor,
+      product.vendorProfile,
+      product.vendor_profile,
+    ) || {};
   const id = firstPresent(source.id, source.order_id, source.orderId);
-  const productId = firstPresent(source.productId, source.product_id, product.id, product.product_id, product.productId);
-  const total = Number(firstPresent(source.total, source.total_amount, source.totalAmount, 0));
-  const orderStatus = String(firstPresent(source.orderStatus, source.order_status, source.fulfillmentStatus, source.fulfillment_status, source.status, "Pending"));
+  const productId = firstPresent(
+    source.productId,
+    source.product_id,
+    product.id,
+    product.product_id,
+    product.productId,
+  );
+  const total = Number(
+    firstPresent(source.total, source.total_amount, source.totalAmount, 0),
+  );
+  const orderStatus = String(
+    firstPresent(
+      source.orderStatus,
+      source.order_status,
+      source.fulfillmentStatus,
+      source.fulfillment_status,
+      source.status,
+      "Pending",
+    ),
+  );
   const vendorId = firstPresent(
     source.vendorId,
     source.vendor_id,
@@ -835,8 +1480,20 @@ function normalizeOrder(record) {
     vendor_id: vendorId,
     vendorName,
     vendor_name: vendorName,
-    customerName: firstPresent(source.customerName, source.customer_name, source.name, source.username, "Customer"),
-    customer_name: firstPresent(source.customer_name, source.customerName, source.name, source.username, "Customer"),
+    customerName: firstPresent(
+      source.customerName,
+      source.customer_name,
+      source.name,
+      source.username,
+      "Customer",
+    ),
+    customer_name: firstPresent(
+      source.customer_name,
+      source.customerName,
+      source.name,
+      source.username,
+      "Customer",
+    ),
     productName,
     product_name: productName,
     quantity: Number(firstPresent(source.quantity, 0)),
@@ -846,16 +1503,43 @@ function normalizeOrder(record) {
     totalAmount: total,
     payment_method: firstPresent(source.payment_method, source.paymentMethod),
     paymentMethod: firstPresent(source.paymentMethod, source.payment_method),
-    phonepe_transaction_id: firstPresent(source.phonepe_transaction_id, source.phonepeTransactionId, source.transaction_id),
-    phonepeTransactionId: firstPresent(source.phonepeTransactionId, source.phonepe_transaction_id, source.transaction_id),
-    paymentStatus: String(firstPresent(source.paymentStatus, source.payment_status, source.payment, "pending")).toLowerCase(),
-    payment_status: firstPresent(source.payment_status, source.paymentStatus, "Pending"),
+    phonepe_transaction_id: firstPresent(
+      source.phonepe_transaction_id,
+      source.phonepeTransactionId,
+      source.transaction_id,
+    ),
+    phonepeTransactionId: firstPresent(
+      source.phonepeTransactionId,
+      source.phonepe_transaction_id,
+      source.transaction_id,
+    ),
+    paymentStatus: String(
+      firstPresent(
+        source.paymentStatus,
+        source.payment_status,
+        source.payment,
+        "pending",
+      ),
+    ).toLowerCase(),
+    payment_status: firstPresent(
+      source.payment_status,
+      source.paymentStatus,
+      "Pending",
+    ),
     fulfillmentStatus: orderStatus.toLowerCase(),
     orderStatus,
     order_status: orderStatus,
     items: source.items || source.cartItems || source.products || [],
-    createdAt: firstPresent(source.createdAt, source.created_at, source.order_date),
-    created_at: firstPresent(source.created_at, source.createdAt, source.order_date),
+    createdAt: firstPresent(
+      source.createdAt,
+      source.created_at,
+      source.order_date,
+    ),
+    created_at: firstPresent(
+      source.created_at,
+      source.createdAt,
+      source.order_date,
+    ),
     dispatchAt: firstPresent(source.dispatchAt, source.dispatch_at),
   };
 }
@@ -871,8 +1555,16 @@ function normalizeReturnRequest(record) {
     order_id: firstPresent(source.order_id, source.orderId),
     orderItemId: firstPresent(source.orderItemId, source.order_item_id),
     order_item_id: firstPresent(source.order_item_id, source.orderItemId),
-    productName: firstPresent(source.productName, source.product_name, source.name),
-    product_name: firstPresent(source.product_name, source.productName, source.name),
+    productName: firstPresent(
+      source.productName,
+      source.product_name,
+      source.name,
+    ),
+    product_name: firstPresent(
+      source.product_name,
+      source.productName,
+      source.name,
+    ),
     vendorId: firstPresent(source.vendorId, source.vendor_id),
     vendor_id: firstPresent(source.vendor_id, source.vendorId),
     userId: firstPresent(source.userId, source.user_id),
@@ -880,8 +1572,22 @@ function normalizeReturnRequest(record) {
     quantity: Number(firstPresent(source.quantity, 0)),
     reason: firstPresent(source.reason, source.return_reason, ""),
     status: String(firstPresent(source.status, "Pending")),
-    images: normalizeMedia(firstPresent(source.parsed_images, source.images, source.files, source.media)),
-    parsed_images: normalizeMedia(firstPresent(source.parsed_images, source.images, source.files, source.media)),
+    images: normalizeMedia(
+      firstPresent(
+        source.parsed_images,
+        source.images,
+        source.files,
+        source.media,
+      ),
+    ),
+    parsed_images: normalizeMedia(
+      firstPresent(
+        source.parsed_images,
+        source.images,
+        source.files,
+        source.media,
+      ),
+    ),
     createdAt: firstPresent(source.createdAt, source.created_at),
     updatedAt: firstPresent(source.updatedAt, source.updated_at),
   };
@@ -890,31 +1596,93 @@ function normalizeReturnRequest(record) {
 function normalizeSalesReportRow(record) {
   const source = unwrapRecord(record) || {};
   const orderId = firstPresent(source.order_id, source.orderId, source.id);
-  const quantity = Number(firstPresent(source.quantity, source.total_quantity, 0));
+  const quantity = Number(
+    firstPresent(source.quantity, source.total_quantity, 0),
+  );
   const price = Number(firstPresent(source.price, source.unit_price, 0));
-  const itemTotal = Number(firstPresent(source.item_total, source.itemTotal, source.lineTotal, quantity * price, 0));
+  const itemTotal = Number(
+    firstPresent(
+      source.item_total,
+      source.itemTotal,
+      source.lineTotal,
+      quantity * price,
+      0,
+    ),
+  );
 
   return {
     ...source,
     id: firstPresent(source.id, orderId),
     order_id: orderId,
     orderId,
-    createdAt: firstPresent(source.createdAt, source.created_at, source.order_date),
-    created_at: firstPresent(source.created_at, source.createdAt, source.order_date),
-    paymentStatus: String(firstPresent(source.paymentStatus, source.payment_status, "pending")).toLowerCase(),
-    payment_status: firstPresent(source.payment_status, source.paymentStatus, "Pending"),
-    orderStatus: String(firstPresent(source.orderStatus, source.order_status, source.status, "Pending")),
-    order_status: String(firstPresent(source.order_status, source.orderStatus, source.status, "Pending")),
+    createdAt: firstPresent(
+      source.createdAt,
+      source.created_at,
+      source.order_date,
+    ),
+    created_at: firstPresent(
+      source.created_at,
+      source.createdAt,
+      source.order_date,
+    ),
+    paymentStatus: String(
+      firstPresent(source.paymentStatus, source.payment_status, "pending"),
+    ).toLowerCase(),
+    payment_status: firstPresent(
+      source.payment_status,
+      source.paymentStatus,
+      "Pending",
+    ),
+    orderStatus: String(
+      firstPresent(
+        source.orderStatus,
+        source.order_status,
+        source.status,
+        "Pending",
+      ),
+    ),
+    order_status: String(
+      firstPresent(
+        source.order_status,
+        source.orderStatus,
+        source.status,
+        "Pending",
+      ),
+    ),
     quantity,
     price,
     item_total: itemTotal,
     itemTotal,
-    productName: firstPresent(source.productName, source.product_name, source.name),
-    product_name: firstPresent(source.product_name, source.productName, source.name),
-    vendorName: firstPresent(source.vendorName, source.vendor_name, source.company_name),
-    vendor_name: firstPresent(source.vendor_name, source.vendorName, source.company_name),
-    customerName: firstPresent(source.customerName, source.customer_name, source.username),
-    customer_name: firstPresent(source.customer_name, source.customerName, source.username),
+    productName: firstPresent(
+      source.productName,
+      source.product_name,
+      source.name,
+    ),
+    product_name: firstPresent(
+      source.product_name,
+      source.productName,
+      source.name,
+    ),
+    vendorName: firstPresent(
+      source.vendorName,
+      source.vendor_name,
+      source.company_name,
+    ),
+    vendor_name: firstPresent(
+      source.vendor_name,
+      source.vendorName,
+      source.company_name,
+    ),
+    customerName: firstPresent(
+      source.customerName,
+      source.customer_name,
+      source.username,
+    ),
+    customer_name: firstPresent(
+      source.customer_name,
+      source.customerName,
+      source.username,
+    ),
     vendorId: firstPresent(source.vendorId, source.vendor_id),
     vendor_id: firstPresent(source.vendor_id, source.vendorId),
   };
@@ -922,14 +1690,37 @@ function normalizeSalesReportRow(record) {
 
 function normalizeVendorProfile(record) {
   const source = unwrapRecord(record) || {};
+  const vendorId = firstPresent(
+    source.id,
+    source.vendor_id,
+    source.vendorId,
+    source.vendor?.id,
+  );
+  const userId = firstPresent(
+    source.userId,
+    source.user_id,
+    source.user?.id,
+    source.vendor?.user_id,
+    source.vendor?.userId,
+  );
   return {
     ...source,
-    id: firstPresent(source.id, source.vendor_id, source.vendorId),
-    userId: firstPresent(source.userId, source.user_id),
-    user_id: firstPresent(source.user_id, source.userId),
+    id: vendorId,
+    vendorId,
+    vendor_id: vendorId,
+    userId,
+    user_id: userId,
     full_name: firstPresent(source.full_name, source.fullName, source.name),
-    company_name: firstPresent(source.company_name, source.companyName, source.company),
-    mobile_number: firstPresent(source.mobile_number, source.mobileNumber, source.phone),
+    company_name: firstPresent(
+      source.company_name,
+      source.companyName,
+      source.company,
+    ),
+    mobile_number: firstPresent(
+      source.mobile_number,
+      source.mobileNumber,
+      source.phone,
+    ),
     vendor_type: firstPresent(source.vendor_type, source.vendorType),
     categories: parseJsonArray(source.categories),
     status: String(firstPresent(source.status, "Active")),
@@ -958,22 +1749,82 @@ function normalizeSalesReport(response) {
         ? response.data
         : unwrapList(response);
   const rows = rawRows.map(normalizeSalesReportRow);
-  const computedTotal = rows.reduce((sum, row) => sum + Number(row.itemTotal || 0), 0);
-  const totalAmount = Number(firstPresent(source.totalAmount, source.total_amount, source.total_earnings, source.totalEarnings, computedTotal, 0));
-  const totalItemsSold = rows.reduce((sum, row) => sum + Number(firstPresent(row.quantity, row.total_quantity, 0)), 0);
-  const orderIds = new Set(rows.map((row) => row.order_id || row.orderId).filter(Boolean));
+  const computedTotal = rows.reduce(
+    (sum, row) => sum + Number(row.itemTotal || 0),
+    0,
+  );
+  const totalAmount = Number(
+    firstPresent(
+      source.totalAmount,
+      source.total_amount,
+      source.total_earnings,
+      source.totalEarnings,
+      computedTotal,
+      0,
+    ),
+  );
+  const totalItemsSold = rows.reduce(
+    (sum, row) =>
+      sum + Number(firstPresent(row.quantity, row.total_quantity, 0)),
+    0,
+  );
+  const orderIds = new Set(
+    rows.map((row) => row.order_id || row.orderId).filter(Boolean),
+  );
   return {
     ...source,
     rows,
     data: rows,
     totalAmount,
     total_amount: totalAmount,
-    total_earnings: Number(firstPresent(source.total_earnings, source.totalEarnings, source.revenue, totalAmount)),
-    totalEarnings: Number(firstPresent(source.totalEarnings, source.total_earnings, source.revenue, totalAmount)),
-    total_orders: Number(firstPresent(source.total_orders, source.totalOrders, source.orders, orderIds.size || rows.length)),
-    totalOrders: Number(firstPresent(source.totalOrders, source.total_orders, source.orders, orderIds.size || rows.length)),
-    total_items_sold: Number(firstPresent(source.total_items_sold, source.totalItemsSold, source.itemsSold, totalItemsSold)),
-    totalItemsSold: Number(firstPresent(source.totalItemsSold, source.total_items_sold, source.itemsSold, totalItemsSold)),
+    total_earnings: Number(
+      firstPresent(
+        source.total_earnings,
+        source.totalEarnings,
+        source.revenue,
+        totalAmount,
+      ),
+    ),
+    totalEarnings: Number(
+      firstPresent(
+        source.totalEarnings,
+        source.total_earnings,
+        source.revenue,
+        totalAmount,
+      ),
+    ),
+    total_orders: Number(
+      firstPresent(
+        source.total_orders,
+        source.totalOrders,
+        source.orders,
+        orderIds.size || rows.length,
+      ),
+    ),
+    totalOrders: Number(
+      firstPresent(
+        source.totalOrders,
+        source.total_orders,
+        source.orders,
+        orderIds.size || rows.length,
+      ),
+    ),
+    total_items_sold: Number(
+      firstPresent(
+        source.total_items_sold,
+        source.totalItemsSold,
+        source.itemsSold,
+        totalItemsSold,
+      ),
+    ),
+    totalItemsSold: Number(
+      firstPresent(
+        source.totalItemsSold,
+        source.total_items_sold,
+        source.itemsSold,
+        totalItemsSold,
+      ),
+    ),
   };
 }
 
@@ -981,7 +1832,15 @@ function normalizeMandiRate(record) {
   const source = unwrapRecord(record) || {};
   const minPrice = Number(firstPresent(source.min_price, source.minPrice, 0));
   const maxPrice = Number(firstPresent(source.max_price, source.maxPrice, 0));
-  const modalPrice = Number(firstPresent(source.total_modal, source.totalModal, source.modal_price, source.average_price, 0));
+  const modalPrice = Number(
+    firstPresent(
+      source.total_modal,
+      source.totalModal,
+      source.modal_price,
+      source.average_price,
+      0,
+    ),
+  );
   return {
     ...source,
     id: firstPresent(source.id, source.mandi_id, source.rate_id),
@@ -989,10 +1848,26 @@ function normalizeMandiRate(record) {
     cropId: firstPresent(source.cropId, source.crop_id),
     crop_name: firstPresent(source.crop_name, source.cropName, source.name),
     cropName: firstPresent(source.cropName, source.crop_name, source.name),
-    crop_name_hi: firstPresent(source.crop_name_hi, source.cropNameHi, source.name_hi),
-    cropNameHi: firstPresent(source.cropNameHi, source.crop_name_hi, source.name_hi),
-    record_date: firstPresent(source.record_date, source.recordDate, source.date),
-    recordDate: firstPresent(source.recordDate, source.record_date, source.date),
+    crop_name_hi: firstPresent(
+      source.crop_name_hi,
+      source.cropNameHi,
+      source.name_hi,
+    ),
+    cropNameHi: firstPresent(
+      source.cropNameHi,
+      source.crop_name_hi,
+      source.name_hi,
+    ),
+    record_date: firstPresent(
+      source.record_date,
+      source.recordDate,
+      source.date,
+    ),
+    recordDate: firstPresent(
+      source.recordDate,
+      source.record_date,
+      source.date,
+    ),
     min_price: minPrice,
     minPrice,
     max_price: maxPrice,
@@ -1011,12 +1886,24 @@ function normalizeSettlement(record) {
     id: firstPresent(source.id, source.settlement_id),
     vendorId: firstPresent(source.vendorId, source.vendor_id),
     vendor_id: firstPresent(source.vendor_id, source.vendorId),
-    vendorName: firstPresent(source.vendorName, source.vendor_name, source.company_name),
-    vendor_name: firstPresent(source.vendor_name, source.vendorName, source.company_name),
+    vendorName: firstPresent(
+      source.vendorName,
+      source.vendor_name,
+      source.company_name,
+    ),
+    vendor_name: firstPresent(
+      source.vendor_name,
+      source.vendorName,
+      source.company_name,
+    ),
     amount: Number(firstPresent(source.amount, source.settlement_amount, 0)),
     remark: firstPresent(source.remark, source.notes, ""),
-    proof_image: normalizeAssetUrl(firstPresent(source.proof_image, source.proofImage, source.image)),
-    proofImage: normalizeAssetUrl(firstPresent(source.proofImage, source.proof_image, source.image)),
+    proof_image: normalizeAssetUrl(
+      firstPresent(source.proof_image, source.proofImage, source.image),
+    ),
+    proofImage: normalizeAssetUrl(
+      firstPresent(source.proofImage, source.proof_image, source.image),
+    ),
     createdAt: firstPresent(source.createdAt, source.created_at),
     updatedAt: firstPresent(source.updatedAt, source.updated_at),
   };
@@ -1028,15 +1915,33 @@ function normalizeGuideParent(record) {
   return {
     ...source,
     id: firstPresent(source.id, source.parent_id),
-    crops_guid_heading_id: firstPresent(source.crops_guid_heading_id, source.heading_id, source.headingId),
-    headingId: firstPresent(source.headingId, source.heading_id, source.crops_guid_heading_id),
+    crops_guid_heading_id: firstPresent(
+      source.crops_guid_heading_id,
+      source.heading_id,
+      source.headingId,
+    ),
+    headingId: firstPresent(
+      source.headingId,
+      source.heading_id,
+      source.crops_guid_heading_id,
+    ),
     crop_id: firstPresent(source.crop_id, source.cropId),
     cropId: firstPresent(source.cropId, source.crop_id),
-    heading_name: firstPresent(source.heading_name, source.headingName, source.title),
-    headingName: firstPresent(source.headingName, source.heading_name, source.title),
+    heading_name: firstPresent(
+      source.heading_name,
+      source.headingName,
+      source.title,
+    ),
+    headingName: firstPresent(
+      source.headingName,
+      source.heading_name,
+      source.title,
+    ),
     crop_name: firstPresent(source.crop_name, source.cropName, source.name),
     cropName: firstPresent(source.cropName, source.crop_name, source.name),
-    status: isDeleted ? "deleted" : String(firstPresent(source.status, "active")).toLowerCase(),
+    status: isDeleted
+      ? "deleted"
+      : String(firstPresent(source.status, "active")).toLowerCase(),
     is_delete: isDeleted,
     createdAt: firstPresent(source.createdAt, source.created_at),
     updatedAt: firstPresent(source.updatedAt, source.updated_at),
@@ -1051,9 +1956,24 @@ function normalizeBrokerageLead(record) {
     categoryName: firstPresent(source.categoryName, source.category_name),
     category_name: firstPresent(source.category_name, source.categoryName),
     userId: firstPresent(source.userId, source.user_id),
-    userName: firstPresent(source.userName, source.user_name, source.customer_name, source.username, source.name),
-    customerName: firstPresent(source.customerName, source.customer_name, source.userName, source.user_name),
-    customerPhone: firstPresent(source.customerPhone, source.customer_phone, source.phone),
+    userName: firstPresent(
+      source.userName,
+      source.user_name,
+      source.customer_name,
+      source.username,
+      source.name,
+    ),
+    customerName: firstPresent(
+      source.customerName,
+      source.customer_name,
+      source.userName,
+      source.user_name,
+    ),
+    customerPhone: firstPresent(
+      source.customerPhone,
+      source.customer_phone,
+      source.phone,
+    ),
     status: String(firstPresent(source.status, "pending")).toLowerCase(),
     createdAt: firstPresent(source.createdAt, source.created_at),
     notes: source.notes || "",
@@ -1062,8 +1982,20 @@ function normalizeBrokerageLead(record) {
 
 function normalizeServiceBooking(record) {
   const source = unwrapRecord(record) || {};
-  const id = firstPresent(source.id, source.service_booking_id, source.serviceBookingId, source.booking_id);
-  const userName = firstPresent(source.user_name, source.userName, source.customer_name, source.customerName, source.user?.name, source.user?.username);
+  const id = firstPresent(
+    source.id,
+    source.service_booking_id,
+    source.serviceBookingId,
+    source.booking_id,
+  );
+  const userName = firstPresent(
+    source.user_name,
+    source.userName,
+    source.customer_name,
+    source.customerName,
+    source.user?.name,
+    source.user?.username,
+  );
   const vendorName = firstPresent(
     source.vendor_name,
     source.vendorName,
@@ -1075,7 +2007,11 @@ function normalizeServiceBooking(record) {
     source.vendor?.name,
     source.vendor?.username,
   );
-  const categoryName = firstPresent(source.category_name, source.categoryName, source.category?.name);
+  const categoryName = firstPresent(
+    source.category_name,
+    source.categoryName,
+    source.category?.name,
+  );
 
   return {
     ...source,
@@ -1084,13 +2020,44 @@ function normalizeServiceBooking(record) {
     service_booking_id: id,
     userId: firstPresent(source.userId, source.user_id, source.user?.id),
     user_id: firstPresent(source.user_id, source.userId, source.user?.id),
-    vendorId: firstPresent(source.vendorId, source.vendor_id, source.vendor?.id),
-    vendor_id: firstPresent(source.vendor_id, source.vendorId, source.vendor?.id),
-    categoryId: firstPresent(source.categoryId, source.category_id, source.category?.id),
-    category_id: firstPresent(source.category_id, source.categoryId, source.category?.id),
-    name: firstPresent(source.name, source.customer_name, source.customerName, userName),
-    phone_number: firstPresent(source.phone_number, source.phoneNumber, source.phone, source.mobile_number),
-    phoneNumber: firstPresent(source.phoneNumber, source.phone_number, source.phone, source.mobile_number),
+    vendorId: firstPresent(
+      source.vendorId,
+      source.vendor_id,
+      source.vendor?.id,
+    ),
+    vendor_id: firstPresent(
+      source.vendor_id,
+      source.vendorId,
+      source.vendor?.id,
+    ),
+    categoryId: firstPresent(
+      source.categoryId,
+      source.category_id,
+      source.category?.id,
+    ),
+    category_id: firstPresent(
+      source.category_id,
+      source.categoryId,
+      source.category?.id,
+    ),
+    name: firstPresent(
+      source.name,
+      source.customer_name,
+      source.customerName,
+      userName,
+    ),
+    phone_number: firstPresent(
+      source.phone_number,
+      source.phoneNumber,
+      source.phone,
+      source.mobile_number,
+    ),
+    phoneNumber: firstPresent(
+      source.phoneNumber,
+      source.phone_number,
+      source.phone,
+      source.mobile_number,
+    ),
     remark: firstPresent(source.remark, source.notes, ""),
     notes: firstPresent(source.notes, source.remark, ""),
     status: String(firstPresent(source.status, "Pending")),
@@ -1114,24 +2081,54 @@ function normalizeBrokerageDeal(record) {
     id: firstPresent(source.id, source.deal_id),
     leadRequestId: firstPresent(source.leadRequestId, source.lead_request_id),
     lead_request_id: firstPresent(source.lead_request_id, source.leadRequestId),
-    serviceBookingId: firstPresent(source.serviceBookingId, source.service_booking_id),
-    service_booking_id: firstPresent(source.service_booking_id, source.serviceBookingId),
+    serviceBookingId: firstPresent(
+      source.serviceBookingId,
+      source.service_booking_id,
+    ),
+    service_booking_id: firstPresent(
+      source.service_booking_id,
+      source.serviceBookingId,
+    ),
     vendorId: firstPresent(source.vendorId, source.vendor_id),
     vendor_id: firstPresent(source.vendor_id, source.vendorId),
     userId: firstPresent(source.userId, source.user_id),
     user_id: firstPresent(source.user_id, source.userId),
     vendorName: firstPresent(source.vendorName, source.vendor_name),
     vendor_name: firstPresent(source.vendor_name, source.vendorName),
-    userName: firstPresent(source.userName, source.user_name, source.customerName, source.customer_name),
-    user_name: firstPresent(source.user_name, source.userName, source.customer_name, source.customerName),
-    customerName: firstPresent(source.customerName, source.customer_name, source.userName, source.user_name),
-    customer_name: firstPresent(source.customer_name, source.customerName, source.user_name, source.userName),
+    userName: firstPresent(
+      source.userName,
+      source.user_name,
+      source.customerName,
+      source.customer_name,
+    ),
+    user_name: firstPresent(
+      source.user_name,
+      source.userName,
+      source.customer_name,
+      source.customerName,
+    ),
+    customerName: firstPresent(
+      source.customerName,
+      source.customer_name,
+      source.userName,
+      source.user_name,
+    ),
+    customer_name: firstPresent(
+      source.customer_name,
+      source.customerName,
+      source.user_name,
+      source.userName,
+    ),
     category_name: firstPresent(source.category_name, source.categoryName),
     categoryName: firstPresent(source.categoryName, source.category_name),
     dealAmount: Number(firstPresent(source.dealAmount, source.deal_amount, 0)),
     deal_amount: Number(firstPresent(source.deal_amount, source.dealAmount, 0)),
-    commissionAmount: Number(firstPresent(source.commissionAmount, source.commission_amount, 0)),
-    commission_amount: Number(firstPresent(source.commission_amount, source.commissionAmount, 0)),
+    commissionAmount: Number(
+      firstPresent(source.commissionAmount, source.commission_amount, 0),
+    ),
+    commission_amount: Number(
+      firstPresent(source.commission_amount, source.commissionAmount, 0),
+    ),
     notes: source.notes || "",
     status: String(firstPresent(source.status, "logged")).toLowerCase(),
     createdAt: firstPresent(source.createdAt, source.created_at),
@@ -1148,7 +2145,12 @@ function normalizeHeading(record) {
     ...record,
     id: english.id ?? record?.id,
     title: firstPresent(english.title, record?.title),
-    title_hi: firstPresent(hindi.title, record?.title_hi, record?.hindi_title, record?.title_hindi),
+    title_hi: firstPresent(
+      hindi.title,
+      record?.title_hi,
+      record?.hindi_title,
+      record?.title_hindi,
+    ),
     is_delete: isDeleted,
     status: isDeleted ? "deleted" : "active",
     createdAt: english.createdAt ?? english.created_at ?? record?.createdAt,
@@ -1165,23 +2167,10 @@ function normalizeGuideDetail(record, context = {}) {
 
   return {
     ...record,
-    id:
-      english.id ??
-      english.detail_id ??
-      record?.id ??
-      record?.detail_id,
-    cropId:
-      english.crop_id ??
-      record?.crop_id ??
-      context.cropId,
-    cropName:
-      context.cropName ??
-      english.crop_name ??
-      record?.crop_name,
-    cropName_hi:
-      context.cropName_hi ??
-      hindi.crop_name ??
-      record?.crop_name_hi,
+    id: english.id ?? english.detail_id ?? record?.id ?? record?.detail_id,
+    cropId: english.crop_id ?? record?.crop_id ?? context.cropId,
+    cropName: context.cropName ?? english.crop_name ?? record?.crop_name,
+    cropName_hi: context.cropName_hi ?? hindi.crop_name ?? record?.crop_name_hi,
     headingId:
       english.crops_guid_heading_id ??
       english.heading_id ??
@@ -1199,7 +2188,12 @@ function normalizeGuideDetail(record, context = {}) {
       hindi.heading_title ??
       record?.heading_name_hi,
     title: firstPresent(english.title, record?.title),
-    title_hi: firstPresent(hindi.title, record?.title_hi, record?.hindi_title, record?.title_hindi),
+    title_hi: firstPresent(
+      hindi.title,
+      record?.title_hi,
+      record?.hindi_title,
+      record?.title_hindi,
+    ),
     description: firstPresent(english.description, record?.description),
     description_hi: firstPresent(
       hindi.description,
@@ -1246,9 +2240,19 @@ function normalizeGuideDetailsResponse(response) {
             cropId: englishCrop.crop_id ?? cropGroup?.crop_id,
             cropName: englishCrop.crop_name ?? cropGroup?.crop_name,
             cropName_hi: hindiCrop.crop_name ?? cropGroup?.crop_name_hi,
-            headingId: englishCrop.crops_guid_heading_id ?? englishCrop.heading_id ?? cropGroup?.crops_guid_heading_id ?? cropGroup?.heading_id,
-            headingName: englishCrop.heading_name ?? englishCrop.heading_title ?? cropGroup?.heading_name,
-            headingName_hi: hindiCrop.heading_name ?? hindiCrop.heading_title ?? cropGroup?.heading_name_hi,
+            headingId:
+              englishCrop.crops_guid_heading_id ??
+              englishCrop.heading_id ??
+              cropGroup?.crops_guid_heading_id ??
+              cropGroup?.heading_id,
+            headingName:
+              englishCrop.heading_name ??
+              englishCrop.heading_title ??
+              cropGroup?.heading_name,
+            headingName_hi:
+              hindiCrop.heading_name ??
+              hindiCrop.heading_title ??
+              cropGroup?.heading_name_hi,
           }),
         );
       }
@@ -1268,9 +2272,19 @@ function normalizeGuideDetailsResponse(response) {
             cropId: englishCrop.crop_id ?? cropGroup?.crop_id,
             cropName: englishCrop.crop_name ?? cropGroup?.crop_name,
             cropName_hi: hindiCrop.crop_name ?? cropGroup?.crop_name_hi,
-            headingId: englishCrop.crops_guid_heading_id ?? englishCrop.heading_id ?? cropGroup?.crops_guid_heading_id ?? cropGroup?.heading_id,
-            headingName: englishCrop.heading_name ?? englishCrop.heading_title ?? cropGroup?.heading_name,
-            headingName_hi: hindiCrop.heading_name ?? hindiCrop.heading_title ?? cropGroup?.heading_name_hi,
+            headingId:
+              englishCrop.crops_guid_heading_id ??
+              englishCrop.heading_id ??
+              cropGroup?.crops_guid_heading_id ??
+              cropGroup?.heading_id,
+            headingName:
+              englishCrop.heading_name ??
+              englishCrop.heading_title ??
+              cropGroup?.heading_name,
+            headingName_hi:
+              hindiCrop.heading_name ??
+              hindiCrop.heading_title ??
+              cropGroup?.heading_name_hi,
           }),
         ];
       }
@@ -1287,7 +2301,9 @@ function normalizeGuideDetailsResponse(response) {
     return headings.flatMap((heading, headingIndex) => {
       const headingId = heading.heading_id ?? heading.id;
       const hindiHeading =
-        hindiHeadingById.get(String(headingId)) || hindiHeadings[headingIndex] || {};
+        hindiHeadingById.get(String(headingId)) ||
+        hindiHeadings[headingIndex] ||
+        {};
       const headingDetails = heading.details || [];
       const hindiDetailsById = new Map(
         (hindiHeading.details || []).map((detail) => [
@@ -1324,7 +2340,11 @@ function appendFiles(formData, fieldName, value) {
   if (!value) return;
   const isFileList =
     typeof FileList !== "undefined" && value instanceof FileList;
-  const files = isFileList ? Array.from(value) : Array.isArray(value) ? value : [value];
+  const files = isFileList
+    ? Array.from(value)
+    : Array.isArray(value)
+      ? value
+      : [value];
   files.filter(Boolean).forEach((file) => formData.append(fieldName, file));
 }
 
@@ -1335,7 +2355,9 @@ function listResult(response, normalizer) {
 }
 
 function mergeListResults(results, normalizer) {
-  const data = results.flatMap((response) => unwrapList(response).map(normalizer));
+  const data = results.flatMap((response) =>
+    unwrapList(response).map(normalizer),
+  );
   const pagination = unwrapPagination(results[0]);
   return Object.assign(data, {
     pagination: pagination
@@ -1349,8 +2371,15 @@ function mergeListResults(results, normalizer) {
   });
 }
 
-async function listAllPages(fetchPage, params = {}, normalizer, { defaultLimit = 100 } = {}) {
-  const responses = await collectPaginatedResponses(fetchPage, params, { defaultLimit });
+async function listAllPages(
+  fetchPage,
+  params = {},
+  normalizer,
+  { defaultLimit = 100 } = {},
+) {
+  const responses = await collectPaginatedResponses(fetchPage, params, {
+    defaultLimit,
+  });
 
   if (responses.length === 1) {
     return listResult(responses[0], normalizer);
@@ -1359,7 +2388,11 @@ async function listAllPages(fetchPage, params = {}, normalizer, { defaultLimit =
   return mergeListResults(responses, normalizer);
 }
 
-async function collectPaginatedResponses(fetchPage, params = {}, { defaultLimit = 100 } = {}) {
+async function collectPaginatedResponses(
+  fetchPage,
+  params = {},
+  { defaultLimit = 100 } = {},
+) {
   const firstParams = {
     ...params,
     page: params.page ?? 1,
@@ -1368,14 +2401,21 @@ async function collectPaginatedResponses(fetchPage, params = {}, { defaultLimit 
   const firstResponse = await fetchPage(firstParams);
   const firstPagination = unwrapPagination(firstResponse);
 
-  if (!firstPagination?.totalPages || Number(firstPagination.totalPages) <= Number(firstPagination.page || 1)) {
+  if (
+    !firstPagination?.totalPages ||
+    Number(firstPagination.totalPages) <= Number(firstPagination.page || 1)
+  ) {
     return [firstResponse];
   }
 
   const totalPages = Number(firstPagination.totalPages);
   const responses = [firstResponse];
 
-  for (let page = Number(firstPagination.page || 1) + 1; page <= totalPages; page += 1) {
+  for (
+    let page = Number(firstPagination.page || 1) + 1;
+    page <= totalPages;
+    page += 1
+  ) {
     responses.push(await fetchPage({ ...firstParams, page }));
   }
 
@@ -1432,7 +2472,10 @@ function cropDiseaseFormData(payload = {}) {
       return;
     }
     if (key === "existing_medial_url" || key === "existing_media_public_ids") {
-      formData.append(key, typeof value === "string" ? value : JSON.stringify(value));
+      formData.append(
+        key,
+        typeof value === "string" ? value : JSON.stringify(value),
+      );
       return;
     }
     formData.append(key, value);
@@ -1443,7 +2486,9 @@ function cropDiseaseFormData(payload = {}) {
 function shopProductFormData(payload = {}) {
   const normalizedPayload = {
     ...payload,
-    tags: Array.isArray(payload.tags) ? JSON.stringify(payload.tags) : payload.tags,
+    tags: Array.isArray(payload.tags)
+      ? JSON.stringify(payload.tags)
+      : payload.tags,
     retained_images: Array.isArray(payload.retained_images)
       ? JSON.stringify(payload.retained_images)
       : payload.retained_images,
@@ -1457,10 +2502,16 @@ function shopProductFormData(payload = {}) {
 function cropImagesFormData(payload = {}) {
   const formData = new FormData();
   appendFiles(formData, "crop_theme_image", payload.crop_theme_image);
-  if (payload.deleteIndexes !== undefined && payload.deleteIndexes !== null && payload.deleteIndexes !== "") {
+  if (
+    payload.deleteIndexes !== undefined &&
+    payload.deleteIndexes !== null &&
+    payload.deleteIndexes !== ""
+  ) {
     formData.append(
       "deleteIndexes",
-      Array.isArray(payload.deleteIndexes) ? JSON.stringify(payload.deleteIndexes) : payload.deleteIndexes,
+      Array.isArray(payload.deleteIndexes)
+        ? JSON.stringify(payload.deleteIndexes)
+        : payload.deleteIndexes,
     );
   }
   return formData;
@@ -1479,10 +2530,13 @@ export const authApi = {
     (
       await apiClient.post(
         "/auth/register",
-        toFormData({
-          ...payload,
-          full_name: payload.full_name ?? payload.username,
-        }, ["profile_image"]),
+        toFormData(
+          {
+            ...payload,
+            full_name: payload.full_name ?? payload.username,
+          },
+          ["profile_image"],
+        ),
         formConfig(),
       )
     ).data,
@@ -1518,7 +2572,8 @@ export const authApi = {
 export const cropCategoriesApi = {
   list: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/crop-category/", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/crop-category/", { params: pageParams })).data,
       params,
       normalizeCategory,
     ),
@@ -1546,7 +2601,9 @@ export const cropCategoriesApi = {
 export const cropsApi = {
   list: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/crops/getAll-crop", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/crops/getAll-crop", { params: pageParams }))
+          .data,
       params,
       normalizeCrop,
     ),
@@ -1597,7 +2654,8 @@ export const cropsApi = {
 export const cropDiseaseApi = {
   list: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/crop-disease/", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/crop-disease/", { params: pageParams })).data,
       params,
       normalizeCropDisease,
     ),
@@ -1635,7 +2693,12 @@ export const cropDiseaseApi = {
 export const guideHeadingsApi = {
   list: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/crops_guid_heading/heading", { params: pageParams })).data,
+      async (pageParams) =>
+        (
+          await apiClient.get("/crops_guid_heading/heading", {
+            params: pageParams,
+          })
+        ).data,
       params,
       normalizeHeading,
     ),
@@ -1685,14 +2748,24 @@ export const guideDetailsApi = {
   list: async (params = {}) =>
     mergeGuideDetailsResponses(
       await collectPaginatedResponses(
-        async (pageParams) => (await apiClient.get("/crop_guid_details/detail", { params: pageParams })).data,
+        async (pageParams) =>
+          (
+            await apiClient.get("/crop_guid_details/detail", {
+              params: pageParams,
+            })
+          ).data,
         params,
       ),
     ),
   byCrop: async (cropId, params = {}) =>
     mergeGuideDetailsResponses(
       await collectPaginatedResponses(
-        async (pageParams) => (await apiClient.get(`/crop_guid_details/detail/${cropId}`, { params: pageParams })).data,
+        async (pageParams) =>
+          (
+            await apiClient.get(`/crop_guid_details/detail/${cropId}`, {
+              params: pageParams,
+            })
+          ).data,
         params,
       ),
     ),
@@ -1809,52 +2882,98 @@ export const productsApi = {
 export const productCategoriesApi = {
   list: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/product-categories", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/product-categories", { params: pageParams }))
+          .data,
       params,
       normalizeTaxonomyCategory,
     ),
   create: async (payload) =>
     normalizeTaxonomyCategory(
-      unwrapRecord((await apiClient.post("/product-categories", payload, jsonConfig())).data),
+      unwrapRecord(
+        (await apiClient.post("/product-categories", payload, jsonConfig()))
+          .data,
+      ),
     ),
   update: async (id, payload) =>
     normalizeTaxonomyCategory(
-      unwrapRecord((await apiClient.put(`/product-categories/${id}`, payload, jsonConfig())).data),
+      unwrapRecord(
+        (
+          await apiClient.put(
+            `/product-categories/${id}`,
+            payload,
+            jsonConfig(),
+          )
+        ).data,
+      ),
     ),
   toggleDelete: async (id) =>
     (await apiClient.patch(`/product-categories/toggle-delete/${id}`)).data,
   subcategories: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/product-categories/subcategory", { params: pageParams })).data,
+      async (pageParams) =>
+        (
+          await apiClient.get("/product-categories/subcategory", {
+            params: pageParams,
+          })
+        ).data,
       params,
       normalizeTaxonomyCategory,
     ),
   createSubcategory: async (payload) =>
     normalizeTaxonomyCategory(
-      unwrapRecord((await apiClient.post("/product-categories/subcategory", toFormData(payload, ["image"]), formConfig())).data),
+      unwrapRecord(
+        (
+          await apiClient.post(
+            "/product-categories/subcategory",
+            toFormData(payload, ["image"]),
+            formConfig(),
+          )
+        ).data,
+      ),
     ),
   updateSubcategory: async (id, payload) =>
     normalizeTaxonomyCategory(
-      unwrapRecord((await apiClient.put(`/product-categories/subcategory/${id}`, toFormData(payload, ["image"]), formConfig())).data),
+      unwrapRecord(
+        (
+          await apiClient.put(
+            `/product-categories/subcategory/${id}`,
+            toFormData(payload, ["image"]),
+            formConfig(),
+          )
+        ).data,
+      ),
     ),
   toggleDeleteSubcategory: async (id) =>
-    (await apiClient.patch(`/product-categories/subcategory/toggle-delete/${id}`)).data,
+    (
+      await apiClient.patch(
+        `/product-categories/subcategory/toggle-delete/${id}`,
+      )
+    ).data,
 };
 
 export const vendorCategoriesApi = {
   list: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/vendor-categories", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/vendor-categories", { params: pageParams }))
+          .data,
       params,
       normalizeTaxonomyCategory,
     ),
   create: async (payload) =>
     normalizeTaxonomyCategory(
-      unwrapRecord((await apiClient.post("/vendor-categories", payload, jsonConfig())).data),
+      unwrapRecord(
+        (await apiClient.post("/vendor-categories", payload, jsonConfig()))
+          .data,
+      ),
     ),
   update: async (id, payload) =>
     normalizeTaxonomyCategory(
-      unwrapRecord((await apiClient.put(`/vendor-categories/${id}`, payload, jsonConfig())).data),
+      unwrapRecord(
+        (await apiClient.put(`/vendor-categories/${id}`, payload, jsonConfig()))
+          .data,
+      ),
     ),
   toggleDelete: async (id) =>
     (await apiClient.patch(`/vendor-categories/toggle-delete/${id}`)).data,
@@ -1863,9 +2982,16 @@ export const vendorCategoriesApi = {
 export const shopProductsApi = {
   list: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/products/all", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/products/all", { params: pageParams })).data,
       params,
-      normalizeShopProduct,
+      // normalizeShopProduct,
+      // (record) => normalizeShopProduct(record, { status: params.status }),
+(record) => {
+  const normalized = normalizeShopProduct(record, { status: params.status });
+  console.log("normalized status:", normalized.status, "isInactive:", normalized.is_delete);
+  return normalized;
+}
     ),
   detail: async (id) => {
     const products = await shopProductsApi.list({
@@ -1877,18 +3003,42 @@ export const shopProductsApi = {
       state: "Madhya Pradesh",
       crop_id: "",
     });
-    return products.find((product) => String(product.id) === String(id)) || null;
+    return (
+      products.find((product) => String(product.id) === String(id)) || null
+    );
   },
   create: async (payload) =>
     normalizeShopProduct(
-      unwrapRecord((await apiClient.post("/products/create", shopProductFormData(payload), formConfig())).data),
+      unwrapRecord(
+        (
+          await apiClient.post(
+            "/products/create",
+            shopProductFormData(payload),
+            formConfig(),
+          )
+        ).data,
+      ),
     ),
   update: async (id, payload) =>
     normalizeShopProduct(
-      unwrapRecord((await apiClient.put(`/products/update/${id}`, shopProductFormData(payload), formConfig())).data),
+      unwrapRecord(
+        (
+          await apiClient.put(
+            `/products/update/${id}`,
+            shopProductFormData(payload),
+            formConfig(),
+          )
+        ).data,
+      ),
     ),
-  remove: async (id) =>
-    (await apiClient.delete(`/products/delete/${id}`)).data,
+  setStatus: async (id, status) =>
+    (
+      await apiClient.delete(`/products/delete/${id}`, {
+        params: { status },
+        // data: { status },
+      })
+    ).data,
+  remove: async (id) => shopProductsApi.setStatus(id, "inactive"),
 };
 
 export const vendorApi = {
@@ -1900,44 +3050,65 @@ export const vendorApi = {
     normalizeVendorProfile((await apiClient.get("/vendor/profile")).data),
   updateProfile: async (id, payload) =>
     normalizeVendorProfile(
-      unwrapRecord((await apiClient.put(`/vendor/profile/${id}`, payload, jsonConfig())).data),
+      unwrapRecord(
+        (await apiClient.put(`/vendor/profile/${id}`, payload, jsonConfig()))
+          .data,
+      ),
     ),
   all: async () =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/vendor/all", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/vendor/all", { params: pageParams })).data,
       {},
       normalizeVendorProfile,
     ),
   serviceProviders: async () =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/vendor/service-providers", { params: pageParams })).data,
+      async (pageParams) =>
+        (
+          await apiClient.get("/vendor/service-providers", {
+            params: pageParams,
+          })
+        ).data,
       {},
       normalizeVendorProfile,
     ),
   byCategory: async (categoryId, params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get(`/vendor/getall-vendor-by-category/${categoryId}`, { params: pageParams })).data,
+      async (pageParams) =>
+        (
+          await apiClient.get(
+            `/vendor/getall-vendor-by-category/${categoryId}`,
+            { params: pageParams },
+          )
+        ).data,
       params,
       normalizeVendorProfile,
     ),
   updateStatus: async (id, status) =>
-    (await apiClient.patch(`/vendor/status/${id}`, { status }, jsonConfig())).data,
+    (await apiClient.patch(`/vendor/status/${id}`, { status }, jsonConfig()))
+      .data,
 };
 
 export const addressesApi = {
   list: async () =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/addresses", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/addresses", { params: pageParams })).data,
       {},
       normalizeAddress,
     ),
   create: async (payload) =>
     normalizeAddress(
-      unwrapRecord((await apiClient.post("/addresses", payload, jsonConfig())).data),
+      unwrapRecord(
+        (await apiClient.post("/addresses", payload, jsonConfig())).data,
+      ),
     ),
   update: async (id, payload) =>
     normalizeAddress(
-      unwrapRecord((await apiClient.put(`/addresses/${id}`, payload, jsonConfig())).data),
+      unwrapRecord(
+        (await apiClient.put(`/addresses/${id}`, payload, jsonConfig())).data,
+      ),
     ),
   remove: async (id) => (await apiClient.delete(`/addresses/${id}`)).data,
 };
@@ -1961,7 +3132,9 @@ export const serviceBookingsApi = {
     ),
   all: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/service-bookings/all", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/service-bookings/all", { params: pageParams }))
+          .data,
       params,
       normalizeServiceBooking,
     ),
@@ -1986,25 +3159,35 @@ export const usersApi = {
       role: params.role ? toApiRole(params.role) : undefined,
     };
     return listAllPages(
-      async (pageParams) => (await apiClient.get("/users", {
-        params: {
-          ...pageParams,
-        },
-      })).data,
+      async (pageParams) =>
+        (
+          await apiClient.get("/users", {
+            params: {
+              ...pageParams,
+            },
+          })
+        ).data,
       requestParams,
       normalizeUser,
     );
   },
   me: async () =>
-    normalizeUser(
-      unwrapRecord((await apiClient.get("/users/me")).data),
-    ),
+    normalizeUser(unwrapRecord((await apiClient.get("/users/me")).data)),
   updateProfile: async (payload) =>
     normalizeUser(
-      unwrapUserRecord((await apiClient.put("/users/update-profile", payload, jsonConfig())).data),
+      unwrapUserRecord(
+        (await apiClient.put("/users/update-profile", payload, jsonConfig()))
+          .data,
+      ),
     ),
   updateRole: async (id, role) =>
-    (await apiClient.patch(`/users/role/${id}`, { role: toApiRole(role) }, jsonConfig())).data,
+    (
+      await apiClient.patch(
+        `/users/role/${id}`,
+        { role: toApiRole(role) },
+        jsonConfig(),
+      )
+    ).data,
   toggleStatus: async (id) =>
     (await apiClient.patch(`/users/toggle-status/${id}`)).data,
 };
@@ -2012,23 +3195,21 @@ export const usersApi = {
 export const queriesApi = {
   create: async (payload) =>
     unwrapRecord(
-      (
-        await apiClient.post(
-          "/queries",
-          toFormData(payload, ["files"]),
-        )
-      ).data,
+      (await apiClient.post("/queries", toFormData(payload, ["files"]))).data,
     ),
   list: async (params = {}) => queriesApi.adminAll(params),
   myQueries: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/queries/my-queries", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/queries/my-queries", { params: pageParams }))
+          .data,
       params,
       normalizeQuery,
     ),
   publicFeed: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/queries/public", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/queries/public", { params: pageParams })).data,
       params,
       normalizeQuery,
     ),
@@ -2036,7 +3217,9 @@ export const queriesApi = {
     normalizeQueryDetail((await apiClient.get(`/queries/${id}`)).data),
   staffPending: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/queries/staff/pending", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/queries/staff/pending", { params: pageParams }))
+          .data,
       params,
       normalizeQuery,
     ),
@@ -2051,49 +3234,84 @@ export const queriesApi = {
     ),
   staffMyReplies: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/queries/staff/my-replies", { params: pageParams })).data,
+      async (pageParams) =>
+        (
+          await apiClient.get("/queries/staff/my-replies", {
+            params: pageParams,
+          })
+        ).data,
       params,
       normalizeStaffReply,
     ),
   adminAll: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/queries/admin/all", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/queries/admin/all", { params: pageParams }))
+          .data,
       params,
       normalizeQuery,
     ),
   adminDetail: async (id) =>
-    normalizeAdminQueryDetail((await apiClient.get(`/queries/admin/${id}/detail`)).data),
+    normalizeAdminQueryDetail(
+      (await apiClient.get(`/queries/admin/${id}/detail`)).data,
+    ),
   adminUserActivity: async (userId) =>
-    normalizeUserActivity((await apiClient.get(`/queries/admin/activity/${userId}`)).data),
+    normalizeUserActivity(
+      (await apiClient.get(`/queries/admin/activity/${userId}`)).data,
+    ),
   update: async (id, payload) =>
-    queriesApi.reply(id, { reply_text: payload.reply_text || payload.replyText || payload.actions || payload.summary }),
+    queriesApi.reply(id, {
+      reply_text:
+        payload.reply_text ||
+        payload.replyText ||
+        payload.actions ||
+        payload.summary,
+    }),
   remove: async (id) => (await apiClient.delete(`/queries/${id}`)).data,
 };
 
 export const ordersApi = {
   list: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/orders/history", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/orders/history", { params: pageParams })).data,
       params,
       normalizeOrder,
     ),
   myOrders: async () =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/orders/my-orders", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/orders/my-orders", { params: pageParams })).data,
       {},
       normalizeOrder,
     ),
   checkout: async (payload) =>
-    normalizeCheckoutResponse((await apiClient.post("/orders/checkout", checkoutPayload(payload), jsonConfig())).data),
+    normalizeCheckoutResponse(
+      (
+        await apiClient.post(
+          "/orders/checkout",
+          checkoutPayload(payload),
+          jsonConfig(),
+        )
+      ).data,
+    ),
   salesReport: async (params = {}) =>
-    normalizeSalesReport((await apiClient.get("/orders/sales-report", { params })).data),
+    normalizeSalesReport(
+      (await apiClient.get("/orders/sales-report", { params })).data,
+    ),
   update: async (id, payload) =>
     normalizeOrder(
       unwrapRecord(
         (
           await apiClient.patch(
             `/orders/status/${id}`,
-            { orderStatus: payload.orderStatus ?? payload.order_status ?? payload.fulfillmentStatus ?? payload.status },
+            {
+              orderStatus:
+                payload.orderStatus ??
+                payload.order_status ??
+                payload.fulfillmentStatus ??
+                payload.status,
+            },
             jsonConfig(),
           )
         ).data,
@@ -2105,7 +3323,12 @@ export const ordersApi = {
         (
           await apiClient.patch(
             `/orders/payment-status/${id}`,
-            { paymentStatus: payload.paymentStatus ?? payload.payment_status ?? payload.status },
+            {
+              paymentStatus:
+                payload.paymentStatus ??
+                payload.payment_status ??
+                payload.status,
+            },
             jsonConfig(),
           )
         ).data,
@@ -2114,13 +3337,16 @@ export const ordersApi = {
   phonepeCallbackGet: async (params = {}) =>
     (await apiClient.get("/orders/phonepe/callback", { params })).data,
   phonepeCallbackPost: async (payload = {}) =>
-    (await apiClient.post("/orders/phonepe/callback", payload, jsonConfig())).data,
+    (await apiClient.post("/orders/phonepe/callback", payload, jsonConfig()))
+      .data,
 };
 
 export const returnRequestsApi = {
   list: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/orders/return/list", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/orders/return/list", { params: pageParams }))
+          .data,
       params,
       normalizeReturnRequest,
     ),
@@ -2151,21 +3377,27 @@ export const returnRequestsApi = {
 export const brokerageApi = {
   createLead: async (payload) =>
     normalizeBrokerageLead(
-      unwrapRecord((await apiClient.post("/brokerage/lead", payload, jsonConfig())).data),
+      unwrapRecord(
+        (await apiClient.post("/brokerage/lead", payload, jsonConfig())).data,
+      ),
     ),
   leads: async () =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/brokerage/leads", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/brokerage/leads", { params: pageParams })).data,
       {},
       normalizeBrokerageLead,
     ),
   createDeal: async (payload) =>
     normalizeBrokerageDeal(
-      unwrapRecord((await apiClient.post("/brokerage/deal", payload, jsonConfig())).data),
+      unwrapRecord(
+        (await apiClient.post("/brokerage/deal", payload, jsonConfig())).data,
+      ),
     ),
   deals: async () =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/brokerage/deals", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/brokerage/deals", { params: pageParams })).data,
       {},
       normalizeBrokerageDeal,
     ),
@@ -2174,17 +3406,22 @@ export const brokerageApi = {
 export const mandiApi = {
   list: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/mandi", { params: pageParams })).data,
+      async (pageParams) =>
+        (await apiClient.get("/mandi", { params: pageParams })).data,
       params,
       normalizeMandiRate,
     ),
   create: async (payload) =>
     normalizeMandiRate(
-      unwrapRecord((await apiClient.post("/mandi", payload, jsonConfig())).data),
+      unwrapRecord(
+        (await apiClient.post("/mandi", payload, jsonConfig())).data,
+      ),
     ),
   update: async (id, payload) =>
     normalizeMandiRate(
-      unwrapRecord((await apiClient.put(`/mandi/${id}`, payload, jsonConfig())).data),
+      unwrapRecord(
+        (await apiClient.put(`/mandi/${id}`, payload, jsonConfig())).data,
+      ),
     ),
   remove: async (id) => (await apiClient.delete(`/mandi/${id}`)).data,
 };
@@ -2194,13 +3431,20 @@ export const settlementsApi = {
     const { vendorId, ...rest } = params;
     if (!vendorId) {
       return listAllPages(
-        async (pageParams) => (await apiClient.get("/settlements/list", { params: pageParams })).data,
+        async (pageParams) =>
+          (await apiClient.get("/settlements/list", { params: pageParams }))
+            .data,
         rest,
         normalizeSettlement,
       );
     }
     return listAllPages(
-      async (pageParams) => (await apiClient.get(`/settlements/list/${vendorId}`, { params: pageParams })).data,
+      async (pageParams) =>
+        (
+          await apiClient.get(`/settlements/list/${vendorId}`, {
+            params: pageParams,
+          })
+        ).data,
       rest,
       normalizeSettlement,
     );
@@ -2222,23 +3466,45 @@ export const settlementsApi = {
 export const guideParentsApi = {
   list: async (params = {}) =>
     listAllPages(
-      async (pageParams) => (await apiClient.get("/crops_guid_parent/parent", { params: pageParams })).data,
+      async (pageParams) =>
+        (
+          await apiClient.get("/crops_guid_parent/parent", {
+            params: pageParams,
+          })
+        ).data,
       params,
       normalizeGuideParent,
     ),
   detail: async (id) =>
     normalizeGuideParent(
-      unwrapRecord((await apiClient.get(`/crops_guid_parent/parent/${id}`)).data),
+      unwrapRecord(
+        (await apiClient.get(`/crops_guid_parent/parent/${id}`)).data,
+      ),
     ),
   create: async (payload) =>
     normalizeGuideParent(
-      unwrapRecord((await apiClient.post("/crops_guid_parent/parent", payload, jsonConfig())).data),
+      unwrapRecord(
+        (
+          await apiClient.post(
+            "/crops_guid_parent/parent",
+            payload,
+            jsonConfig(),
+          )
+        ).data,
+      ),
     ),
   update: async (id, payload) =>
     normalizeGuideParent(
-      unwrapRecord((await apiClient.put(`/crops_guid_parent/parent/${id}`, payload, jsonConfig())).data),
+      unwrapRecord(
+        (
+          await apiClient.put(
+            `/crops_guid_parent/parent/${id}`,
+            payload,
+            jsonConfig(),
+          )
+        ).data,
+      ),
     ),
   remove: async (id) =>
     (await apiClient.patch(`/crops_guid_parent/parent/delete/${id}`)).data,
 };
-
