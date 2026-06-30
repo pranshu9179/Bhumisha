@@ -11,7 +11,7 @@ export function AppProviders({ children }) {
       <QueryClientProvider client={queryClient}>
         <HashRouter>
           {children}
-          <Toaster richColors position="top-right" />
+          <Toaster richColors closeButton position="top-right" />
         </HashRouter>
       </QueryClientProvider>
     </Provider>

@@ -25,6 +25,8 @@ const map = {
   escalated: 'danger',
   critical: 'danger',
   deleted: 'danger',
+  cancelled: 'danger',
+  shipped: 'default',
 }
 
 export function StatusBadge({ value }) {

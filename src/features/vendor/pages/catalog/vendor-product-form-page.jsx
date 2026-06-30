@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useMemo, useRef } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Field } from '@/components/forms/field'
 import { Button } from '@/components/ui/button'
@@ -27,13 +27,55 @@ function numberOrUndefined(value) {
   return Number.isNaN(numericValue) ? undefined : numericValue
 }
 
+function asArray(value) {
+  if (!value) return []
+  if (Array.isArray(value)) return value.filter(Boolean)
+  if (typeof value === 'string') {
+    try {
+      return asArray(JSON.parse(value))
+    } catch {
+      return value.trim() ? [value] : []
+    }
+  }
+  return [value].filter(Boolean)
+}
+
 function retainedImages(product) {
-  return product?.retained_images || product?.images || []
+  return Array.from(
+    new Set(
+      [
+        ...asArray(product?.retained_images),
+        ...asArray(product?.images),
+        product?.image_url,
+        product?.image,
+      ].filter(Boolean),
+    ),
+  )
 }
 
 function validRouteId(value) {
   if (!value || value === 'undefined' || value === 'null') return undefined
   return value
+}
+
+function fieldValue(product, keys, fallback = '') {
+  for (const key of keys) {
+    const value = product?.[key]
+    if (value !== undefined && value !== null) return value
+  }
+  return fallback
+}
+
+function tagsValue(tags) {
+  const parsed = asArray(tags)
+  if (parsed.length) return parsed.join(', ')
+  return typeof tags === 'string' ? tags : ''
+}
+
+function approvalValue(product) {
+  const values = [product?.is_approved, product?.isApproved, product?.approvalStatus]
+  if (values.some((value) => ['true', '1', 'yes', 'approved', 'active'].includes(String(value).toLowerCase()))) return 'true'
+  return 'false'
 }
 
 export function VendorProductFormPage() {
@@ -42,12 +84,14 @@ export function VendorProductFormPage() {
   const basePath = productBasePath(role)
   const canApprove = role === 'admin' || role === 'employee'
   const navigate = useNavigate()
+  const { state } = useLocation()
   const { id } = useParams()
   const productId = validRouteId(id)
   const { data: categories = [] } = useProductCategories()
   const { data: subcategories = [] } = useProductSubcategories()
   const { data: crops = [] } = useProducts({ page: 1, limit: 100, status: 'false' })
   const { data: product } = useShopProductDetail(productId)
+  const currentProduct = product || state?.product || null
   const mutation = useShopProductSaveMutation()
   const {
     register,
@@ -97,19 +141,27 @@ export function VendorProductFormPage() {
   )
 
   useEffect(() => {
-    if (product && productId) {
+    if (currentProduct && productId) {
       reset({
-        ...product,
-        category_id: product.category_id || product.categoryId || '',
-        sub_category_id: product.sub_category_id || product.subCategoryId || '',
-        crop_id: product.crop_id || product.cropId || '',
+        name: fieldValue(currentProduct, ['name', 'product_name', 'title']),
+        name_hi: fieldValue(currentProduct, ['name_hi', 'hindi_name', 'name_hindi']),
+        description: fieldValue(currentProduct, ['description', 'product_description']),
+        description_hi: fieldValue(currentProduct, ['description_hi', 'hindi_description', 'description_hindi']),
+        category_id: String(fieldValue(currentProduct, ['category_id', 'categoryId', 'product_category_id', 'productCategoryId'])),
+        sub_category_id: String(fieldValue(currentProduct, ['sub_category_id', 'subCategoryId', 'subcategory_id', 'subcategoryId', 'product_sub_category_id', 'productSubCategoryId'])),
+        crop_id: String(fieldValue(currentProduct, ['crop_id', 'cropId'])),
         // product_type: product.product_type || product.productType || 'organic',
-        tags: Array.isArray(product.tags) ? product.tags.join(', ') : product.tags || '',
+        price: fieldValue(currentProduct, ['price', 'selling_price', 'sellingPrice'], ''),
+        mrp: fieldValue(currentProduct, ['mrp'], 0),
+        vendor_price: fieldValue(currentProduct, ['vendor_price', 'vendorPrice', 'min_vendor_price', 'minVendorPrice'], 0),
+        stock: fieldValue(currentProduct, ['stock', 'quantity'], 0),
+        tags: tagsValue(currentProduct.tags),
+        status: fieldValue(currentProduct, ['status'], 'draft'),
         image: undefined,
-        is_approved: product.is_approved ? 'true' : 'false',
+        is_approved: approvalValue(currentProduct),
       })
     }
-  }, [productId, product, reset])
+  }, [productId, currentProduct, reset])
 
   useEffect(() => {
     const currentCategoryId = selectedCategoryId || ''
@@ -149,7 +201,7 @@ export function VendorProductFormPage() {
         stock: values.stock,
         image: values.image,
         tags: JSON.stringify(tags),
-        retained_images: productId ? retainedImages(product) : undefined,
+        retained_images: productId ? retainedImages(currentProduct) : undefined,
         category_id: numberOrUndefined(values.category_id),
         sub_category_id: numberOrUndefined(values.sub_category_id),
         crop_id: numberOrUndefined(values.crop_id),
@@ -178,22 +230,55 @@ export function VendorProductFormPage() {
             <Field label="HINDI PRODUCT NAME" error={errors.name_hi?.message} className="md:col-span-2">
               <Input lang="hi" dir="auto" {...register('name_hi')} />
             </Field>
+            <div className="grid gap-4 md:col-span-2 md:grid-cols-3">
+              <Field label="PRODUCT CATEGORY *" error={errors.category_id?.message}>
+                <NativeSelect {...register('category_id')}>
+                  <option value="">Select an option</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </Field>
+              <Field label="SUBCATEGORY" error={errors.sub_category_id?.message}>
+                <NativeSelect {...register('sub_category_id')} disabled={!selectedCategoryId}>
+                  <option value="">{selectedCategoryId ? 'Select subcategory' : 'Select product category first'}</option>
+                  {filteredSubcategories.map((subcategory) => (
+                    <option key={subcategory.id} value={subcategory.id}>
+                      {subcategory.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </Field>
+              <Field label="RELATED CROP" error={errors.crop_id?.message}>
+                <NativeSelect {...register('crop_id')}>
+                  <option value="">No crop mapping</option>
+                  {crops.map((crop) => (
+                    <option key={crop.id} value={crop.id}>
+                      {crop.name}
+                      {crop.name_hi ? ` / ${crop.name_hi}` : ''}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </Field>
+            </div>
             <Field label="DESCRIPTION" error={errors.description?.message} className="md:col-span-2">
               <Textarea rows={4} {...register('description')} />
             </Field>
             <Field label="HINDI DESCRIPTION" error={errors.description_hi?.message} className="md:col-span-2">
               <Textarea rows={4} lang="hi" dir="auto" {...register('description_hi')} />
             </Field>
-            <div className="grid gap-4 md:col-span-2 md:grid-cols-3">
+            <div className="grid gap-4 md:col-span-2 md:grid-cols-2">
               <Field label="MRP (INR) *" error={errors.mrp?.message}>
                 <Input type="number" {...register('mrp')} />
               </Field>
               <Field label="MIN VENDOR PRICE (LEAST TO RECEIVE) *" error={errors.vendor_price?.message}>
                 <Input type="number" {...register('vendor_price')} />
               </Field>
-              <Field label="SELLING PRICE (INR)" error={errors.price?.message}>
+              {/* <Field label="SELLING PRICE (INR)" error={errors.price?.message}>
                 <Input type="number" placeholder={canApprove ? 'Selling price' : 'Set by Admin'} readOnly={!canApprove} {...register('price')} />
-              </Field>
+              </Field> */}
             </div>
             <Field label="STOCK" error={errors.stock?.message} className="md:col-span-2">
               <Input type="number" {...register('stock')} />
@@ -214,63 +299,33 @@ export function VendorProductFormPage() {
                 <Input type="file" accept="image/jpeg,image/png,image/jpg,image/webp" multiple {...register('image')} />
               </div>
             </Field>
-            {productId && (product?.image_url || product?.image) ? (
+            {productId && retainedImages(currentProduct).length ? (
               <div className="md:col-span-2">
                 <p className="mb-2 text-sm font-medium text-slate-500">Current image</p>
                 <PreviewableImage
-                  src={product.image_url || product.image}
-                  alt={product.name || 'Product image'}
+                  src={retainedImages(currentProduct)[0]}
+                  alt={currentProduct?.name || 'Product image'}
                   className="h-28 w-36 rounded-lg object-cover"
                   fallbackClassName="h-28 w-36 rounded-lg"
-                  previewTitle={`${product.name || 'Product'} image`}
+                  previewTitle={`${currentProduct?.name || 'Product'} image`}
                 />
               </div>
             ) : null}
-            {productId && retainedImages(product).length > 1 ? (
+            {productId && retainedImages(currentProduct).length > 1 ? (
               <div className="grid gap-3 md:col-span-2 sm:grid-cols-2 lg:grid-cols-4">
-                {retainedImages(product).map((image, index) => (
+                {retainedImages(currentProduct).map((image, index) => (
                   <PreviewableImage
-                    key={`${product.id}-image-${index}`}
+                    key={`${currentProduct?.id || productId}-image-${index}`}
                     src={image}
-                    alt={`${product.name || 'Product'} image ${index + 1}`}
+                    alt={`${currentProduct?.name || 'Product'} image ${index + 1}`}
                     className="h-28 w-full rounded-lg object-cover"
                     fallbackClassName="h-28 w-full rounded-lg"
-                    previewTitle={`${product.name || 'Product'} image ${index + 1}`}
+                    previewTitle={`${currentProduct?.name || 'Product'} image ${index + 1}`}
                   />
                 ))}
               </div>
             ) : null}
-            <Field label="PRODUCT CATEGORY *" error={errors.category_id?.message} className="md:col-span-2">
-              <NativeSelect {...register('category_id')}>
-                <option value="">Select an option</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </NativeSelect>
-            </Field>
-            <Field label="SUBCATEGORY" error={errors.sub_category_id?.message} className="md:col-span-2">
-              <NativeSelect {...register('sub_category_id')} disabled={!selectedCategoryId}>
-                <option value="">{selectedCategoryId ? 'Select subcategory' : 'Select product category first'}</option>
-                {filteredSubcategories.map((subcategory) => (
-                  <option key={subcategory.id} value={subcategory.id}>
-                    {subcategory.name}
-                  </option>
-                ))}
-              </NativeSelect>
-            </Field>
-            <Field label="RELATED CROP" error={errors.crop_id?.message} className="md:col-span-2">
-              <NativeSelect {...register('crop_id')}>
-                <option value="">No crop mapping</option>
-                {crops.map((crop) => (
-                  <option key={crop.id} value={crop.id}>
-                    {crop.name}
-                    {crop.name_hi ? ` / ${crop.name_hi}` : ''}
-                  </option>
-                ))}
-              </NativeSelect>
-            </Field>
+           
             <Field label="SEARCH TAGS (COMMA SEPARATED)" hint="Comma-separated tags, e.g. seeds, organic, wheat" error={errors.tags?.message} className="md:col-span-2">
               <Input {...register('tags')} />
             </Field>

@@ -17,18 +17,42 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PageHeader } from '@/features/shared/components/page-header'
 import { WorkflowTimeline } from '@/features/shared/components/workflow-timeline'
 import { formatCurrency } from '@/lib/format'
-import { useOrders, useProducts, useQueries, useUsers } from '@/services/api/hooks'
+import { useOrders, useProducts, useQueries, useServiceBookings, useSettlements, useUsers, useVendors } from '@/services/api/hooks'
 
 const pieColors = ['#166534', '#0f766e', '#f59e0b', '#dc2626']
+
+function statusOf(order) {
+  return String(order.orderStatus || order.order_status || order.fulfillmentStatus || '').toLowerCase()
+}
+
+function isToday(value) {
+  if (!value) return false
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return false
+  const today = new Date()
+  return date.toDateString() === today.toDateString()
+}
 
 export default function AdminDashboardPage() {
   const { data: users = [] } = useUsers({ page: 1, limit: 100 })
   const { data: products = [] } = useProducts({ page: 1, limit: 100 })
   const { data: queries = [] } = useQueries({ page: 1, limit: 100 })
   const { data: orders = [] } = useOrders({ page: 1, limit: 100 })
+  const { data: serviceBookings = [] } = useServiceBookings({ page: 1, limit: 100 })
+  const { data: settlements = [] } = useSettlements({ page: 1, limit: 100 })
+  const { data: vendors = [] } = useVendors()
 
   const lowStock = products.filter((product) => Number(product.stock || 0) <= 20)
   const revenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0)
+  const todayOrders = orders.filter((order) => isToday(order.createdAt || order.created_at))
+  const todayPendingOrders = todayOrders.filter((order) => ['pending', 'processing'].includes(statusOf(order)))
+  const todayDispatchedOrders = todayOrders.filter((order) => ['dispatched', 'shipped'].includes(statusOf(order)))
+  const todayDeliveredOrders = todayOrders.filter((order) => statusOf(order) === 'delivered')
+  const todayVendorEnquiries = serviceBookings.filter((booking) => isToday(booking.createdAt || booking.created_at))
+  const todaySettlements = settlements.filter((settlement) => isToday(settlement.createdAt || settlement.created_at))
+  const paymentDue = orders
+    .filter((order) => !['paid', 'success', 'completed'].includes(String(order.paymentStatus || order.payment_status || '').toLowerCase()))
+    .reduce((sum, order) => sum + Number(order.total || 0), 0)
   const revenueTrend = orders.map((order, index) => ({
     label: `Order ${index + 1}`,
     value: Number(order.total || 0),
@@ -39,12 +63,17 @@ export default function AdminDashboardPage() {
   }))
 
   const widgets = [
-    { label: 'Users', value: users.length, delta: 'From /users' },
-    { label: 'Crops', value: products.length, delta: 'From /crops' },
-    { label: 'Queries', value: queries.length, delta: 'From /queries/admin/all' },
-    { label: 'Orders', value: orders.length, delta: 'From /orders/history' },
-    { label: 'Revenue', value: formatCurrency(revenue), delta: 'Order total' },
-    { label: 'Low stock', value: lowStock.length, delta: 'Crop catalog' },
+    { label: "Today's orders", value: todayOrders.length, delta: 'Open order section', to: '/admin/orders?tab=orders&filter_date=today' },
+    { label: "Today's pending orders", value: todayPendingOrders.length, delta: 'Pending and processing', to: '/admin/orders?tab=orders&filter_date=today&filter_status=pending' },
+    { label: "Today's dispatched orders", value: todayDispatchedOrders.length, delta: 'Dispatched and shipped', to: '/admin/orders?tab=orders&filter_date=today&filter_status=dispatched' },
+    { label: "Today's delivered orders", value: todayDeliveredOrders.length, delta: 'Delivered orders', to: '/admin/orders?tab=orders&filter_date=today&filter_status=delivered' },
+    { label: "Today's services enquiry", value: todayVendorEnquiries.length, delta: 'Service bookings', to: '/admin/orders?tab=service-bookings&filter_date=today' },
+    { label: "Today's payment settlement", value: todaySettlements.length, delta: 'Settlement records', to: '/admin/settlements?filter_date=today' },
+    { label: 'Total payment due', value: formatCurrency(paymentDue), delta: 'Uncleared order value', to: '/admin/orders?tab=orders&filter_status=pending' },
+    { label: 'Total vendor', value: vendors.length, delta: 'Manage vendors', to: '/admin/vendors' },
+    { label: 'Users', value: users.length, delta: 'Manage users', to: '/admin/users' },
+    { label: 'Farmer Crop Queries', value: queries.length, delta: 'Query desk', to: '/admin/queries' },
+    { label: 'Products', value: products.length, delta: 'Manage catalog', to: '/admin/products' },
   ]
 
   return (
@@ -65,13 +94,14 @@ export default function AdminDashboardPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {widgets.map((item, index) => (
           <StatCard
             key={item.label}
             label={item.label}
             value={item.value}
             delta={item.delta}
+            to={item.to}
             accent={index % 3 === 1 ? 'accent' : index % 4 === 0 ? 'primary' : 'danger'}
           />
         ))}

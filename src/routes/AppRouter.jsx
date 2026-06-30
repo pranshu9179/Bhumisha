@@ -29,6 +29,8 @@ const GuideDetailsPage = lazy(() => import('@/features/admin/pages/catalog/guide
 const CropDiseasesPage = lazy(() => import('@/features/admin/pages/catalog/crop-diseases-page'))
 const MarketplaceTaxonomyPage = lazy(() => import('@/features/admin/pages/marketplace-taxonomy-page'))
 const OrdersPage = lazy(() => import('@/features/admin/pages/operations-pages').then((module) => ({ default: module.OrdersPage })))
+const ServiceBookingsPageAdmin = lazy(() => import('@/features/admin/pages/operations-pages').then((module) => ({ default: module.ServiceBookingsPage })))
+const SalesReportPageAdmin = lazy(() => import('@/features/admin/pages/operations-pages').then((module) => ({ default: module.SalesReportPage })))
 const BrokeragePage = lazy(() => import('@/features/admin/pages/brokerage-page'))
 const MandiRatesPage = lazy(() => import('@/features/admin/pages/mandi-rates-page'))
 const SettlementsPage = lazy(() => import('@/features/admin/pages/settlements-page'))
@@ -124,6 +126,8 @@ export function AppRouter() {
           <Route path="crop-diseases" element={<CropDiseasesPage />} />
           <Route path="marketplace-taxonomy" element={<MarketplaceTaxonomyPage />} />
           <Route path="orders" element={<OrdersPage />} />
+          <Route path="service-bookings" element={<ServiceBookingsPageAdmin />} />
+          <Route path="sales-report" element={<SalesReportPageAdmin />} />
           <Route path="mandi-rates" element={<MandiRatesPage />} />
           <Route path="settlements" element={<SettlementsPage />} />
           <Route path="brokerage" element={<BrokeragePage />} />

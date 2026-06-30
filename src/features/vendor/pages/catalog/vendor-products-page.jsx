@@ -1,5 +1,5 @@
 import { Edit2, Plus, RotateCcw, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { DataTable } from "@/components/data-table/data-table";
@@ -346,7 +346,7 @@ export function VendorProductsPage() {
                   variant="secondary"
                   onClick={(event) => event.stopPropagation()}
                 >
-                  <Link to={`${basePath}/${id}/edit`}>
+                  <Link to={`${basePath}/${id}/edit`} state={{ product: row.original }}>
                     <Edit2 className="h-4 w-4" />
                     Edit
                   </Link>
@@ -362,10 +362,6 @@ export function VendorProductsPage() {
     ],
     [basePath, canApprove, role, vendorIds],
   );
-
-  useEffect(() => {
-    console.log(inactiveProducts, "ASDFGHJK");
-  }, [inactiveProducts]);
 
   return (
     <div className="space-y-6">

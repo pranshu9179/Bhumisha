@@ -2985,27 +2985,31 @@ export const shopProductsApi = {
       async (pageParams) =>
         (await apiClient.get("/products/all", { params: pageParams })).data,
       params,
-      // normalizeShopProduct,
-      // (record) => normalizeShopProduct(record, { status: params.status }),
-(record) => {
-  const normalized = normalizeShopProduct(record, { status: params.status });
-  console.log("normalized status:", normalized.status, "isInactive:", normalized.is_delete);
-  return normalized;
-}
+      (record) => normalizeShopProduct(record, { status: params.status }),
     ),
   detail: async (id) => {
-    const products = await shopProductsApi.list({
-      page: 1,
-      limit: 12,
-      search: "",
-      city: "Bhopal",
-      district: "Bhopal",
-      state: "Madhya Pradesh",
-      crop_id: "",
-    });
-    return (
-      products.find((product) => String(product.id) === String(id)) || null
+    const responses = await Promise.allSettled(
+      [{}, { status: "active" }, { status: "inactive" }].map((params) =>
+        shopProductsApi.list({
+          page: 1,
+          limit: 100,
+          search: "",
+          crop_id: "",
+          ...params,
+        }),
+      ),
     );
+    const productLists = responses
+      .filter((response) => response.status === "fulfilled")
+      .map((response) => response.value);
+    return productLists
+      .flat()
+      .find(
+        (product) =>
+          String(product.id) === String(id) ||
+          String(product.product_id) === String(id) ||
+          String(product.productId) === String(id),
+      ) || null;
   },
   create: async (payload) =>
     normalizeShopProduct(

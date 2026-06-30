@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Handshake, Plus } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { NativeSelect } from '@/components/ui/native-select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageHeader } from '@/features/shared/components/page-header'
 import { RecordDetailsDialog } from '@/features/shared/components/record-details-dialog'
@@ -67,6 +68,7 @@ export function BrokeragePage() {
     },
   })
 
+  const [isLogDealOpen, setIsLogDealOpen] = useState(false)
   const userMap = useMemo(() => Object.fromEntries(users.map((user) => [user.id, user.name])), [users])
 
   const leadColumns = useMemo(
@@ -164,6 +166,7 @@ export function BrokeragePage() {
                 dealForm.setValue('leadRequestId', '')
                 dealForm.setValue('vendorId', row.original.vendorId || row.original.vendor_id || '')
                 dealForm.setValue('userId', row.original.userId || row.original.user_id || '')
+                setIsLogDealOpen(true)
               }}
             >
               Use booking
@@ -207,96 +210,20 @@ export function BrokeragePage() {
         compact
       />
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Card>
-          <CardContent className="space-y-4 p-6">
-            <div className="flex items-center gap-2 font-semibold text-dark">
-              <Plus className="h-4 w-4" />
-              New lead
-            </div>
-            <form className="grid gap-4" onSubmit={leadForm.handleSubmit(createLead)}>
-              <Field label="Category" error={leadForm.formState.errors.categoryName?.message}>
-                <NativeSelect {...leadForm.register('categoryName')}>
-                  <option value="Soil Testing">Soil Testing</option>
-                  <option value="Farm Tools & Machinery">Farm Tools & Machinery</option>
-                  <option value="Protected Cultivation">Protected Cultivation</option>
-                  <option value="Drip Irrigation">Drip Irrigation</option>
-                  <option value="Post-harvest Packaging">Post-harvest Packaging</option>
-                </NativeSelect>
-              </Field>
-              <Field label="Notes">
-                <Input {...leadForm.register('notes')} />
-              </Field>
-              <div className="flex justify-end">
-                <Button type="submit" disabled={leadMutation.isPending}>
-                  Create lead
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+      {/* <div className="grid gap-4 xl:grid-cols-2">
+        <Card> ... Leads form ... </Card>
+        <Card> ... Log deal form ... </Card>
+      </div> */}
 
-        <Card>
-          <CardContent className="space-y-4 p-6">
-            <div className="flex items-center gap-2 font-semibold text-dark">
-              <Handshake className="h-4 w-4" />
-              Log deal
-            </div>
-            <form className="grid gap-4 md:grid-cols-2" onSubmit={dealForm.handleSubmit(createDeal)}>
-              <Field label="Lead request ID">
-                <Input {...dealForm.register('leadRequestId')} />
-              </Field>
-              <Field label="Service booking ID" error={dealForm.formState.errors.serviceBookingId?.message}>
-                <Input {...dealForm.register('serviceBookingId')} />
-              </Field>
-              <Field label="Vendor" error={dealForm.formState.errors.vendorId?.message}>
-                <NativeSelect {...dealForm.register('vendorId')}>
-                  <option value="">Select vendor</option>
-                  {vendors.map((vendor) => (
-                    <option key={vendor.id} value={vendor.id}>
-                      {vendor.company_name || vendor.full_name || vendor.username || vendor.id}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </Field>
-              <Field label="User" error={dealForm.formState.errors.userId?.message}>
-                <NativeSelect {...dealForm.register('userId')}>
-                  <option value="">Select user</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </Field>
-              <Field label="Deal amount" error={dealForm.formState.errors.dealAmount?.message}>
-                <Input type="number" {...dealForm.register('dealAmount')} />
-              </Field>
-              <Field label="Commission" error={dealForm.formState.errors.commissionAmount?.message}>
-                <Input type="number" {...dealForm.register('commissionAmount')} />
-              </Field>
-              <Field label="Notes">
-                <Input {...dealForm.register('notes')} />
-              </Field>
-              <div className="flex justify-end md:col-span-2">
-                <Button type="submit" variant="secondary" disabled={dealMutation.isPending}>
-                  Log deal
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="leads" className="space-y-4">
+      <Tabs defaultValue="service-bookings" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="leads">Leads ({leads.length})</TabsTrigger>
+          {/* <TabsTrigger value="leads">Leads ({leads.length})</TabsTrigger> */}
           <TabsTrigger value="service-bookings">Service bookings ({serviceBookings.length})</TabsTrigger>
           <TabsTrigger value="deals">Deals ({deals.length})</TabsTrigger>
         </TabsList>
-        <TabsContent value="leads">
+        {/* <TabsContent value="leads">
           <DataTable columns={leadColumns} data={leads} searchPlaceholder="Search brokerage leads" />
-        </TabsContent>
+        </TabsContent> */}
         <TabsContent value="service-bookings">
           <DataTable columns={serviceBookingColumns} data={serviceBookings} searchPlaceholder="Search service bookings" />
         </TabsContent>
@@ -304,6 +231,65 @@ export function BrokeragePage() {
           <DataTable columns={dealColumns} data={deals} searchPlaceholder="Search brokerage deals" />
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isLogDealOpen} onOpenChange={setIsLogDealOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Handshake className="h-5 w-5" />
+              Log deal
+            </DialogTitle>
+            <DialogDescription>
+              Record a completed brokerage deal with commission details.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="grid gap-4 md:grid-cols-2"
+            onSubmit={dealForm.handleSubmit(async (values) => {
+              await createDeal(values)
+              setIsLogDealOpen(false)
+            })}
+          >
+            <input type="hidden" {...dealForm.register('leadRequestId')} />
+            <input type="hidden" {...dealForm.register('serviceBookingId')} />
+            
+            <Field label="Vendor" error={dealForm.formState.errors.vendorId?.message}>
+              <NativeSelect {...dealForm.register('vendorId')}>
+                <option value="">Select vendor</option>
+                {vendors.map((vendor) => (
+                  <option key={vendor.id} value={vendor.id}>
+                    {vendor.company_name || vendor.full_name || vendor.username || vendor.id}
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label="User" error={dealForm.formState.errors.userId?.message}>
+              <NativeSelect {...dealForm.register('userId')}>
+                <option value="">Select user</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label="Deal amount" error={dealForm.formState.errors.dealAmount?.message}>
+              <Input type="number" {...dealForm.register('dealAmount')} />
+            </Field>
+            <Field label="Commission" error={dealForm.formState.errors.commissionAmount?.message}>
+              <Input type="number" {...dealForm.register('commissionAmount')} />
+            </Field>
+            <Field label="Notes" className="md:col-span-2">
+              <Input {...dealForm.register('notes')} />
+            </Field>
+            <div className="flex justify-end md:col-span-2 pt-2">
+              <Button type="submit" disabled={dealMutation.isPending}>
+                Log deal
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
