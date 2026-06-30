@@ -152,10 +152,10 @@ export function SettlementsPage() {
       {balanceInfo && (
         <>
           <div className="grid gap-4 md:grid-cols-3 mb-6">
-            <Card className="bg-[#1a4a38] text-white overflow-hidden border-0 shadow-sm">
+            <Card className="overflow-hidden border-l-4 border-l-primary shadow-sm">
               <CardContent className="p-6">
-                <div className="text-xs font-semibold uppercase tracking-wider text-white/80 mb-2">Total Valid Sales (कुल बिक्री)</div>
-                <div className="text-3xl font-bold">₹{balanceInfo.totalSales.toLocaleString('en-IN')}</div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-dark/60 mb-2">Total Valid Sales (कुल बिक्री)</div>
+                <div className="text-3xl font-bold text-dark">₹{balanceInfo.totalSales.toLocaleString('en-IN')}</div>
               </CardContent>
             </Card>
             <Card className="overflow-hidden border-l-4 border-l-emerald-500 shadow-sm">
