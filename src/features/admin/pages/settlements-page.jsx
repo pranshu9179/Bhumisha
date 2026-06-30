@@ -181,7 +181,7 @@ export function SettlementsPage() {
                   <div className="text-sm font-semibold uppercase tracking-wider text-dark/70 mb-3">Outstanding Balance (बकाया हिसाब)</div>
                   <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium ${balanceInfo.type === 'admin_pays' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                     <div className={`h-2 w-2 rounded-full ${balanceInfo.type === 'admin_pays' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                    {balanceInfo.type === 'admin_pays' ? 'Vendor owes Admin (वेंडर द्वारा देय)' : 'Admin owes Vendor (एडमिन द्वारा देय)'}
+                    {balanceInfo.type === 'admin_pays' ? 'Admin owes Vendor (एडमिन द्वारा देय)' : 'Vendor owes Admin (वेंडर द्वारा देय)'}
                   </div>
                 </div>
                 
@@ -213,8 +213,7 @@ export function SettlementsPage() {
                       type="number" 
                       placeholder="Enter amount settled..."
                       {...form.register('amount')} 
-                      disabled={balanceInfo.type === 'admin_collects'}
-                      max={balanceInfo.type === 'admin_pays' ? balanceInfo.amount : undefined} 
+                      max={balanceInfo.amount} 
                       min={1}
                     />
                   </Field>
@@ -229,7 +228,7 @@ export function SettlementsPage() {
                     <Input type="file" accept="image/*" {...form.register('proof_image')} className="text-sm file:mr-4 file:bg-transparent file:text-sm file:font-medium" />
                   </Field>
                   <div className="flex justify-end pt-4">
-                    <Button type="submit" disabled={saveMutation.isPending || balanceInfo.type === 'admin_collects'}>
+                    <Button type="submit" disabled={saveMutation.isPending}>
                       Log Settlement
                     </Button>
                   </div>
